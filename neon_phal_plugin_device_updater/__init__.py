@@ -66,9 +66,10 @@ class DeviceUpdater(PHALPlugin):
         if not initramfs_request.ok:
             raise ConnectionError(f"Unable to get updated initramfs from: "
                                   f"{self.initramfs_url}")
-        new_hash = hashlib.md5(initramfs_request.content)
         with open(self.initramfs_update_path, 'wb+') as f:
             f.write(initramfs_request.content)
+            f.seek(0)
+            new_hash = hashlib.md5(f.read())
         with open("/boot/firmware/initramfs", 'rb') as f:
             old_hash = hashlib.md5(f.read())
         if new_hash == old_hash:
