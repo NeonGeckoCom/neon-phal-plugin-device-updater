@@ -64,9 +64,8 @@ class DeviceUpdater(PHALPlugin):
             raise RuntimeError("No initramfs_url configured")
         initramfs_request = requests.get(self.initramfs_url)
         if not initramfs_request.ok:
-            LOG.error(f"Unable to get updated initramfs from: "
-                      f"{self.initramfs_url}")
-            return False
+            raise ConnectionError(f"Unable to get updated initramfs from: "
+                                  f"{self.initramfs_url}")
         new_hash = hashlib.md5(initramfs_request.content)
         with open(self.initramfs_update_path, 'wb+') as f:
             f.write(initramfs_request.content)
@@ -83,16 +82,19 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.update_initramfs` Message
         """
         try:
+            LOG.info("Checking initramfs update")
             if not isfile(self.initramfs_real_path):
-                LOG.info("No initramfs to update")
+                LOG.debug("No initramfs to update")
                 response = message.response({"updated": None})
             elif not self._get_initramfs_latest():
+                LOG.debug("No initramfs update")
                 response = message.response({"updated": False})
             else:
-                LOG.info("Updating initramfs")
+                LOG.debug("Updating initramfs")
                 proc = Popen("systemctl start update-initramfs", shell=True)
                 success = proc.wait(30) == 0
                 if success:
+                    LOG.info("Updated initramfs")
                     response = message.response({"updated": success})
                 else:
                     LOG.error(f"Update service exited with error: {success}")
