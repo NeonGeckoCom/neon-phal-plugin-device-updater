@@ -154,7 +154,7 @@ class DeviceUpdater(PHALPlugin):
             LOG.info("Checking squashfs update")
             update = self._get_squashfs_latest()
             if update:
-                LOG.info("Update available")
+                LOG.info("Update available and will be installed on restart")
                 shutil.copyfile(update, self.squashfs_path)
                 response = message.response({"new_version": update})
             else:
