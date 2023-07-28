@@ -28,6 +28,7 @@
 
 import unittest
 
+from os.path import isfile, basename
 from unittest.mock import Mock
 from ovos_bus_client.message import Message
 from neon_phal_plugin_device_updater import DeviceUpdater
@@ -37,6 +38,33 @@ from ovos_utils.messagebus import FakeBus
 class PluginTests(unittest.TestCase):
     bus = FakeBus()
     plugin = DeviceUpdater(bus)
+
+    def test_build_info(self):
+        self.assertIsInstance(self.plugin.build_info, dict)
+
+    def test_get_initramfs_latest(self):
+        # TODO
+        pass
+
+    def test_get_squashfs_latest(self):
+        # TODO: Set up a fake directory for testing smaller file downloads
+        # Empty build info
+        self.plugin._build_info = dict()
+        self.plugin.initramfs_update_path = "/tmp/update.sqfs"
+        self.assertFalse(isfile(self.plugin.initramfs_update_path))
+
+        # Download valid update
+        file = self.plugin._get_squashfs_latest()
+        self.assertTrue(isfile(file))
+
+        # Already downloaded
+        self.assertEqual(self.plugin._get_squashfs_latest(), file)
+
+        # Already updated
+        image_name, image_time = basename(file).rsplit('.', 1)[0].split('_', 1)
+        self.plugin._build_info = {'base_os': {'name': image_name,
+                                               'time': image_time}}
+        self.assertIsNone(self.plugin._get_squashfs_latest())
 
 
 if __name__ == '__main__':
