@@ -29,10 +29,9 @@
 import hashlib
 import json
 import shutil
-
 import requests
 
-from typing import Optional
+from typing import Optional, Tuple
 from os import remove
 from os.path import isfile, join, dirname
 from subprocess import Popen
@@ -65,7 +64,9 @@ class DeviceUpdater(PHALPlugin):
         self._build_info = None
 
         # Register messagebus listeners
+        self.bus.on("neon.check_update_initramfs", self.check_update_initramfs)
         self.bus.on("neon.update_initramfs", self.update_initramfs)
+        self.bus.on("neon.check_update_squashfs", self.check_update_squashfs)
         self.bus.on("neon.update_squashfs", self.update_squashfs)
 
     @property
@@ -100,12 +101,7 @@ class DeviceUpdater(PHALPlugin):
             return False
         return True
 
-    def _get_squashfs_latest(self) -> Optional[str]:
-        """
-        Get the latest squashfs image if different from the installed version
-        @returns: path to downloaded update if present, else None
-        """
-
+    def _check_squashfs_update_available(self) -> Optional[Tuple[str, str]]:
         # Get all available update files from the configured URL
         ext = '.squashfs'
         prefix = self.build_info.get("base_os", {}).get("name", "")
@@ -121,6 +117,20 @@ class DeviceUpdater(PHALPlugin):
         if installed_image_time and installed_image_time in newest_version:
             LOG.info("Already updated")
             return None
+        return newest_version, download_url
+
+    def _get_squashfs_latest(self) -> Optional[str]:
+        """
+        Get the latest squashfs image if different from the installed version
+        @returns: path to downloaded update if present, else None
+        """
+
+        # Check for an available update
+        update = self._check_squashfs_update_available()
+        if not update:
+            # Already updated
+            return None
+        newest_version, download_url = update
 
         # Check if the updated version has already been downloaded
         download_path = join(dirname(self.initramfs_update_path),
@@ -144,6 +154,22 @@ class DeviceUpdater(PHALPlugin):
             LOG.exception(e)
             if isfile(temp_dl_path):
                 remove(temp_dl_path)
+
+    def check_update_initramfs(self, message: Message):
+        """
+        Handle a request to check for initramfs updates
+        @param message: `neon.check_update_initramfs` Message
+        """
+        update_available = self._get_initramfs_latest()
+        self.bus.emit(message.response({"update_available": update_available}))
+
+    def check_update_squashfs(self, message: Message):
+        """
+        Handle a request to check for squash updates
+        @param message: `neon.check_update_squashfs` Message
+        """
+        update_available = self._check_squashfs_update_available() is not None
+        self.bus.emit(message.response({"update_available": update_available}))
 
     def update_squashfs(self, message: Message):
         """
