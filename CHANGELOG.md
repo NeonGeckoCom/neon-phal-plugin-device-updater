@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a3](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a3) (2023-07-31)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a2...0.0.1a3)
+
+**Merged pull requests:**
+
+- Add messagebus API to check update availability [\#2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/2) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.1a2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a2) (2023-07-28)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/b8be47ee79c26933a50c9e8a79cf0f358578628f...0.0.1a2)
