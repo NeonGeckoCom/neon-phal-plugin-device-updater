@@ -46,6 +46,10 @@ class PluginTests(unittest.TestCase):
         # TODO
         pass
 
+    def test_check_squashfs_update_available(self):
+        # TODO
+        pass
+
     def test_get_squashfs_latest(self):
         # TODO: Set up a fake directory for testing smaller file downloads
         # Empty build info
@@ -66,6 +70,21 @@ class PluginTests(unittest.TestCase):
                                                'time': image_time}}
         self.assertIsNone(self.plugin._get_squashfs_latest())
 
+    def test_check_update_initramfs(self):
+        # TODO
+        pass
+
+    def test_check_update_squashfs(self):
+        # TODO
+        pass
+
+    def test_update_squashfs(self):
+        # TODO
+        pass
+
+    def test_update_initramfs(self):
+        # TODO
+        pass
 
 if __name__ == '__main__':
     unittest.main()
