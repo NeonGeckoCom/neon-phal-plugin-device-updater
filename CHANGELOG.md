@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a4](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a4) (2023-08-02)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a3...0.0.1a4)
+
+**Merged pull requests:**
+
+- Check initramFS update by MD5 [\#3](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/3) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.1a3](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a3) (2023-07-31)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a2...0.0.1a3)
