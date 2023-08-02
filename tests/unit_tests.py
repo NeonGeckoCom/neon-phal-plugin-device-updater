@@ -27,10 +27,10 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+import requests
 
-from os.path import isfile, basename
-from unittest.mock import Mock
-from ovos_bus_client.message import Message
+from os import remove
+from os.path import isfile, basename, join, dirname
 from neon_phal_plugin_device_updater import DeviceUpdater
 from ovos_utils.messagebus import FakeBus
 
@@ -41,6 +41,19 @@ class PluginTests(unittest.TestCase):
 
     def test_build_info(self):
         self.assertIsInstance(self.plugin.build_info, dict)
+
+    def test_check_initramfs_update_available(self):
+        self.plugin.initramfs_real_path = join(dirname(__file__), "initramfs")
+        with open(self.plugin.initramfs_real_path, 'w+') as f:
+            f.write("test")
+        self.assertTrue(self.plugin._check_initramfs_update_available())
+
+        # Explicitly get valid initramfs
+        with open(self.plugin.initramfs_real_path, 'wb') as f:
+            f.write(requests.get(self.plugin.initramfs_url).content)
+        self.assertFalse(self.plugin._check_initramfs_update_available())
+
+        remove(self.plugin.initramfs_real_path)
 
     def test_get_initramfs_latest(self):
         # TODO

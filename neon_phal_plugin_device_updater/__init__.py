@@ -80,6 +80,25 @@ class DeviceUpdater(PHALPlugin):
                 self._build_info = dict()
         return self._build_info
 
+    def _check_initramfs_update_available(self):
+        """
+        Check if there is a newer initramfs version available by comparing MD5
+        """
+        if not self.initramfs_url:
+            raise RuntimeError("No initramfs_url configured")
+        md5_request = requests.get(f"{self.initramfs_url}.md5")
+        if not md5_request.ok:
+            LOG.warning("Unable to get md5; downloading latest initramfs")
+            return self._get_initramfs_latest()
+        new_hash = md5_request.text.split('\n')[0]
+        with open(self.initramfs_real_path, 'rb') as f:
+            old_hash = hashlib.md5(f.read()).hexdigest()
+        if new_hash == old_hash:
+            LOG.debug("initramfs not changed")
+            return False
+        LOG.info("initramfs update available")
+        return True
+
     def _get_initramfs_latest(self) -> bool:
         """
         Get the latest initramfs image and check if it is different from the
@@ -99,7 +118,7 @@ class DeviceUpdater(PHALPlugin):
             new_hash = hashlib.md5(initramfs_request.content).hexdigest()
             with open(self.initramfs_update_path, 'wb+') as f:
                 f.write(initramfs_request.content)
-        with open("/boot/firmware/initramfs", 'rb') as f:
+        with open(self.initramfs_real_path, 'rb') as f:
             old_hash = hashlib.md5(f.read()).hexdigest()
         if new_hash == old_hash:
             LOG.debug("initramfs not changed")
@@ -122,6 +141,7 @@ class DeviceUpdater(PHALPlugin):
         if installed_image_time and installed_image_time in newest_version:
             LOG.info("Already updated")
             return None
+        LOG.info(f"New squashFS: {newest_version}")
         return newest_version, download_url
 
     def _get_squashfs_latest(self) -> Optional[str]:
@@ -165,7 +185,7 @@ class DeviceUpdater(PHALPlugin):
         Handle a request to check for initramfs updates
         @param message: `neon.check_update_initramfs` Message
         """
-        update_available = self._get_initramfs_latest()
+        update_available = self._check_initramfs_update_available()
         self.bus.emit(message.response({"update_available": update_available}))
 
     def check_update_squashfs(self, message: Message):
