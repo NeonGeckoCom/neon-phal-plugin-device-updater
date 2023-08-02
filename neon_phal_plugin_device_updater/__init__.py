@@ -96,6 +96,7 @@ class DeviceUpdater(PHALPlugin):
         if new_hash == old_hash:
             LOG.debug("initramfs not changed")
             return False
+        LOG.info("initramfs update available")
         return True
 
     def _get_initramfs_latest(self) -> bool:
@@ -140,6 +141,7 @@ class DeviceUpdater(PHALPlugin):
         if installed_image_time and installed_image_time in newest_version:
             LOG.info("Already updated")
             return None
+        LOG.info(f"New squashFS: {newest_version}")
         return newest_version, download_url
 
     def _get_squashfs_latest(self) -> Optional[str]:
