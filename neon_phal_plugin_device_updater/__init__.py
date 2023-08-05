@@ -31,6 +31,7 @@ import json
 import shutil
 import requests
 
+from datetime import datetime
 from typing import Optional, Tuple
 from os import remove
 from os.path import isfile, join, dirname
@@ -80,9 +81,10 @@ class DeviceUpdater(PHALPlugin):
                 self._build_info = dict()
         return self._build_info
 
-    def _check_initramfs_update_available(self):
+    def _check_initramfs_update_available(self) -> bool:
         """
         Check if there is a newer initramfs version available by comparing MD5
+        @return: True if a newer initramfs is available to download
         """
         if not self.initramfs_url:
             raise RuntimeError("No initramfs_url configured")
@@ -103,6 +105,7 @@ class DeviceUpdater(PHALPlugin):
         """
         Get the latest initramfs image and check if it is different from the
         current installed initramfs
+        @return: True if the downloaded initramfs file is different from current
         """
         if not self.initramfs_url:
             raise RuntimeError("No initramfs_url configured")
@@ -125,7 +128,32 @@ class DeviceUpdater(PHALPlugin):
             return False
         return True
 
+    @staticmethod
+    def check_version_is_newer(current: str, latest: str) -> bool:
+        """
+        Compare two image versions to check if an update is available
+        @param current: currently installed version string
+        @param latest: latest available version from remote
+        @return: True if latest is newer than current
+        """
+        try:
+            date_format = "%Y-%m-%d_%H_%M"
+            current_datetime = datetime.strptime(current, date_format)
+            latest_datetime = datetime.strptime(latest, date_format)
+            if latest_datetime > current_datetime:
+                return True
+            return False
+        except Exception as e:
+            LOG.exception(e)
+            # Parse failure, assume there's an update
+            return True
+
     def _check_squashfs_update_available(self) -> Optional[Tuple[str, str]]:
+        """
+        Check if a newer squashFS image is available and return the new version
+        and download link.
+        @return: new version and download link if available, else None
+        """
         # Get all available update files from the configured URL
         ext = '.squashfs'
         prefix = self.build_info.get("base_os", {}).get("name", "")
@@ -136,20 +164,24 @@ class DeviceUpdater(PHALPlugin):
         newest_version = valid_links[0][0]
         download_url = valid_links[0][1]
 
-        # Check if the latest version matches the installed version
+        # Parse time of latest and current OS Image
         installed_image_time = self.build_info.get("base_os", {}).get("time")
-        if installed_image_time and installed_image_time in newest_version:
-            LOG.info("Already updated")
-            return None
-        LOG.info(f"New squashFS: {newest_version}")
-        return newest_version, download_url
+        new_image_time = newest_version.split('_', 1)[1].rsplit('.', 1)[0]
+
+        # Compare latest version with current
+        if installed_image_time == new_image_time:
+            LOG.info("Already Updated")
+        elif self.check_version_is_newer(installed_image_time, new_image_time):
+            LOG.info(f"New squashFS: {newest_version}")
+            return newest_version, download_url
+        else:
+            LOG.info("Installed image is newer than latest")
 
     def _get_squashfs_latest(self) -> Optional[str]:
         """
         Get the latest squashfs image if different from the installed version
-        @returns: path to downloaded update if present, else None
+        @return: path to downloaded update if present, else None
         """
-
         # Check for an available update
         update = self._check_squashfs_update_available()
         if not update:

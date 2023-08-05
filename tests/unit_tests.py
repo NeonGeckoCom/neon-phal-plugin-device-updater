@@ -56,12 +56,66 @@ class PluginTests(unittest.TestCase):
         remove(self.plugin.initramfs_real_path)
 
     def test_get_initramfs_latest(self):
-        # TODO
-        pass
+        real_url = self.plugin.initramfs_url
+
+        # Check invalid URL
+        self.plugin.initramfs_url = None
+        with self.assertRaises(RuntimeError):
+            self.plugin._get_initramfs_latest()
+        self.plugin.initramfs_url = real_url
+
+        # Update already downloaded and applied
+        self.plugin.initramfs_update_path = join(dirname(__file__), "update")
+        self.plugin.initramfs_real_path = join(dirname(__file__), "initramfs")
+        with open(self.plugin.initramfs_real_path, 'w+') as f:
+            f.write("test")
+        with open(self.plugin.initramfs_update_path, 'w+') as f:
+            f.write("test")
+        self.assertFalse(self.plugin._get_initramfs_latest())
+
+        # Update already downloaded not applied
+        with open(self.plugin.initramfs_update_path, 'w') as f:
+            f.write("test 2")
+
+        # TODO: Test download hash
+        remove(self.plugin.initramfs_update_path)
+        remove(self.plugin.initramfs_real_path)
+
+    def test_check_version_is_newer(self):
+        new_version = "2023-08-04_16_30"
+        old_version = "2023-08-04_10_30"
+
+        self.assertFalse(self.plugin.check_version_is_newer(new_version,
+                                                            old_version))
+        self.assertTrue(self.plugin.check_version_is_newer(old_version,
+                                                           new_version))
+        self.assertFalse(self.plugin.check_version_is_newer(new_version,
+                                                            new_version))
+        # Test default behavior
+        self.assertTrue(self.plugin.check_version_is_newer("2022", "2023"))
 
     def test_check_squashfs_update_available(self):
-        # TODO
-        pass
+        self.plugin._build_info = dict()
+        version, url = self.plugin._check_squashfs_update_available()
+        self.assertIsInstance(version, str)
+        self.assertTrue(url.startswith('http'))
+        new_image_time = version.split('_', 1)[1].rsplit('.', 1)[0]
+
+        # Current equals remote
+        self.plugin._build_info = {"base_os": {"time": new_image_time}}
+        self.assertIsNone(self.plugin._check_squashfs_update_available())
+
+        # Current newer than remote
+        new_image_time = f"3000-{new_image_time.split('-', 1)[1]}"
+        self.plugin._build_info["base_os"]["time"] = new_image_time
+        self.assertIsNone(self.plugin._check_squashfs_update_available())
+
+        # Current older than remote
+        old_image_time = f"2020-{new_image_time.split('_', 1)[1]}"
+        self.plugin._build_info["base_os"]["time"] = old_image_time
+        version2, url2 = self.plugin._check_squashfs_update_available()
+        self.assertEqual(version, version2)
+        self.assertEqual(url, url2)
 
     def test_get_squashfs_latest(self):
         # TODO: Set up a fake directory for testing smaller file downloads
@@ -98,6 +152,7 @@ class PluginTests(unittest.TestCase):
     def test_update_initramfs(self):
         # TODO
         pass
+
 
 if __name__ == '__main__':
     unittest.main()
