@@ -170,12 +170,13 @@ class DeviceUpdater(PHALPlugin):
 
         # Compare latest version with current
         if installed_image_time == new_image_time:
-            LOG.info("Already Updated")
+            LOG.info(f"Already Updated ({new_image_time}")
         elif self.check_version_is_newer(installed_image_time, new_image_time):
             LOG.info(f"New squashFS: {newest_version}")
             return newest_version, download_url
         else:
-            LOG.info("Installed image is newer than latest")
+            LOG.info(f"Installed image ({installed_image_time}) is newer "
+                     f"than latest ({new_image_time})")
 
     def _get_squashfs_latest(self) -> Optional[str]:
         """
