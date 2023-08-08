@@ -125,8 +125,12 @@ class DeviceUpdater(PHALPlugin):
             new_hash = hashlib.md5(initramfs_request.content).hexdigest()
             with open(self.initramfs_update_path, 'wb+') as f:
                 f.write(initramfs_request.content)
-        with open(self.initramfs_real_path, 'rb') as f:
-            old_hash = hashlib.md5(f.read()).hexdigest()
+        try:
+            with open(self.initramfs_real_path, 'rb') as f:
+                old_hash = hashlib.md5(f.read()).hexdigest()
+        except Exception as e:
+            LOG.exception(e)
+            old_hash = None
         if new_hash == old_hash:
             LOG.info("initramfs not changed. Removing downloaded file.")
             remove(self.initramfs_update_path)
