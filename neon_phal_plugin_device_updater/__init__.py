@@ -93,10 +93,14 @@ class DeviceUpdater(PHALPlugin):
             LOG.warning("Unable to get md5; downloading latest initramfs")
             return self._get_initramfs_latest()
         new_hash = md5_request.text.split('\n')[0]
-        with open(self.initramfs_real_path, 'rb') as f:
-            old_hash = hashlib.md5(f.read()).hexdigest()
+        try:
+            with open(self.initramfs_real_path, 'rb') as f:
+                old_hash = hashlib.md5(f.read()).hexdigest()
+        except Exception as e:
+            LOG.error(e)
+            old_hash = None
         if new_hash == old_hash:
-            LOG.debug("initramfs not changed")
+            LOG.info("initramfs not changed")
             return False
         LOG.info("initramfs update available")
         return True
@@ -121,10 +125,15 @@ class DeviceUpdater(PHALPlugin):
             new_hash = hashlib.md5(initramfs_request.content).hexdigest()
             with open(self.initramfs_update_path, 'wb+') as f:
                 f.write(initramfs_request.content)
-        with open(self.initramfs_real_path, 'rb') as f:
-            old_hash = hashlib.md5(f.read()).hexdigest()
+        try:
+            with open(self.initramfs_real_path, 'rb') as f:
+                old_hash = hashlib.md5(f.read()).hexdigest()
+        except Exception as e:
+            LOG.error(e)
+            old_hash = None
         if new_hash == old_hash:
-            LOG.debug("initramfs not changed")
+            LOG.info("initramfs not changed. Removing downloaded file.")
+            remove(self.initramfs_update_path)
             return False
         return True
 
@@ -256,9 +265,11 @@ class DeviceUpdater(PHALPlugin):
         """
         try:
             LOG.info("Checking initramfs update")
-            if not isfile(self.initramfs_real_path):
+            if not isfile(self.initramfs_real_path) and \
+                    not message.data.get("force_update"):
                 LOG.debug("No initramfs to update")
-                response = message.response({"updated": None})
+                response = message.response({"updated": None,
+                                             "error": "No initramfs to update"})
             elif not self._get_initramfs_latest():
                 LOG.debug("No initramfs update")
                 response = message.response({"updated": False})
