@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a6](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a6) (2023-08-08)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a5...0.0.1a6)
+
+**Merged pull requests:**
+
+- Handle edge case where initramfs\_real\_path doesn't exist [\#5](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/5) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.1a5](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a5) (2023-08-05)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a4...0.0.1a5)
