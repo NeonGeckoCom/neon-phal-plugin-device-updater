@@ -97,7 +97,7 @@ class DeviceUpdater(PHALPlugin):
             with open(self.initramfs_real_path, 'rb') as f:
                 old_hash = hashlib.md5(f.read()).hexdigest()
         except Exception as e:
-            LOG.exception(e)
+            LOG.error(e)
             old_hash = None
         if new_hash == old_hash:
             LOG.info("initramfs not changed")
@@ -129,7 +129,7 @@ class DeviceUpdater(PHALPlugin):
             with open(self.initramfs_real_path, 'rb') as f:
                 old_hash = hashlib.md5(f.read()).hexdigest()
         except Exception as e:
-            LOG.exception(e)
+            LOG.error(e)
             old_hash = None
         if new_hash == old_hash:
             LOG.info("initramfs not changed. Removing downloaded file.")
@@ -265,9 +265,11 @@ class DeviceUpdater(PHALPlugin):
         """
         try:
             LOG.info("Checking initramfs update")
-            if not isfile(self.initramfs_real_path):
+            if not isfile(self.initramfs_real_path) and \
+                    not message.data.get("force_update"):
                 LOG.debug("No initramfs to update")
-                response = message.response({"updated": None})
+                response = message.response({"updated": None,
+                                             "error": "No initramfs to update"})
             elif not self._get_initramfs_latest():
                 LOG.debug("No initramfs update")
                 response = message.response({"updated": False})
