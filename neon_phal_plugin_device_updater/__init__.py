@@ -52,7 +52,7 @@ class DeviceUpdater(PHALPlugin):
                                              "neon_debos/raw/dev/overlays/"
                                              "02-rpi4/boot/firmware/initramfs")
         self.initramfs_real_path = self.config.get("initramfs_path",
-                                                   "/boot/firmware/initramfs")
+                                                   "/opt/neon/initramfs")
         self.initramfs_update_path = self.config.get("initramfs_upadate_path",
                                                      "/opt/neon/initramfs")
         self.squashfs_url = self.config.get("squashfs_url",
@@ -63,12 +63,24 @@ class DeviceUpdater(PHALPlugin):
                                              "/opt/neon/update.squashfs")
 
         self._build_info = None
+        self._initramfs_hash = None
 
         # Register messagebus listeners
         self.bus.on("neon.check_update_initramfs", self.check_update_initramfs)
         self.bus.on("neon.update_initramfs", self.update_initramfs)
         self.bus.on("neon.check_update_squashfs", self.check_update_squashfs)
         self.bus.on("neon.update_squashfs", self.update_squashfs)
+
+    @property
+    def initramfs_md5(self) -> Optional[str]:
+        if not self._initramfs_hash:
+            try:
+                Popen("mount_firmware", shell=True).wait(5)
+                with open(self.initramfs_real_path, "rb") as f:
+                    self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
+            except Exception as e:
+                LOG.error(e)
+        return self._initramfs_hash
 
     @property
     def build_info(self) -> dict:
@@ -93,13 +105,8 @@ class DeviceUpdater(PHALPlugin):
             LOG.warning("Unable to get md5; downloading latest initramfs")
             return self._get_initramfs_latest()
         new_hash = md5_request.text.split('\n')[0]
-        try:
-            with open(self.initramfs_real_path, 'rb') as f:
-                old_hash = hashlib.md5(f.read()).hexdigest()
-        except Exception as e:
-            LOG.error(e)
-            old_hash = None
-        if new_hash == old_hash:
+
+        if new_hash == self._initramfs_hash:
             LOG.info("initramfs not changed")
             return False
         LOG.info("initramfs update available")
@@ -125,13 +132,8 @@ class DeviceUpdater(PHALPlugin):
             new_hash = hashlib.md5(initramfs_request.content).hexdigest()
             with open(self.initramfs_update_path, 'wb+') as f:
                 f.write(initramfs_request.content)
-        try:
-            with open(self.initramfs_real_path, 'rb') as f:
-                old_hash = hashlib.md5(f.read()).hexdigest()
-        except Exception as e:
-            LOG.error(e)
-            old_hash = None
-        if new_hash == old_hash:
+
+        if new_hash == self._initramfs_hash:
             LOG.info("initramfs not changed. Removing downloaded file.")
             remove(self.initramfs_update_path)
             return False
@@ -279,6 +281,7 @@ class DeviceUpdater(PHALPlugin):
                 success = proc.wait(30) == 0
                 if success:
                     LOG.info("Updated initramfs")
+                    self._initramfs_hash = None  # Update on next check
                     response = message.response({"updated": success})
                 else:
                     LOG.error(f"Update service exited with error: {success}")
