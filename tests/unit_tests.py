@@ -46,11 +46,13 @@ class PluginTests(unittest.TestCase):
         self.plugin.initramfs_real_path = join(dirname(__file__), "initramfs")
         with open(self.plugin.initramfs_real_path, 'w+') as f:
             f.write("test")
+        self.plugin._initramfs_hash = None
         self.assertTrue(self.plugin._check_initramfs_update_available())
 
         # Explicitly get valid initramfs
         with open(self.plugin.initramfs_real_path, 'wb') as f:
             f.write(requests.get(self.plugin.initramfs_url).content)
+        self.plugin._initramfs_hash = None
         self.assertFalse(self.plugin._check_initramfs_update_available())
 
         remove(self.plugin.initramfs_real_path)

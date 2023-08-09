@@ -80,6 +80,9 @@ class DeviceUpdater(PHALPlugin):
                     self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
             except Exception as e:
                 LOG.error(e)
+                if isfile(self.initramfs_real_path):
+                    with open(self.initramfs_real_path, "rb") as f:
+                        self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
         return self._initramfs_hash
 
     @property
