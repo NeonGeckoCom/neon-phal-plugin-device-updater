@@ -59,6 +59,7 @@ class PluginTests(unittest.TestCase):
 
     def test_get_initramfs_latest(self):
         real_url = self.plugin.initramfs_url
+        self.plugin._initramfs_hash = None
 
         # Check invalid URL
         self.plugin.initramfs_url = None
@@ -67,6 +68,7 @@ class PluginTests(unittest.TestCase):
         self.plugin.initramfs_url = real_url
 
         # Update already downloaded and applied
+        self.plugin._initramfs_hash = None
         self.plugin.initramfs_update_path = join(dirname(__file__), "update")
         self.plugin.initramfs_real_path = join(dirname(__file__), "initramfs")
         with open(self.plugin.initramfs_real_path, 'w+') as f:
@@ -76,8 +78,10 @@ class PluginTests(unittest.TestCase):
         self.assertFalse(self.plugin._get_initramfs_latest())
 
         # Update already downloaded not applied
+        self.plugin._initramfs_hash = None
         with open(self.plugin.initramfs_update_path, 'w') as f:
             f.write("test 2")
+        self.assertTrue(self.plugin._get_initramfs_latest())
 
         # TODO: Test download hash
         remove(self.plugin.initramfs_update_path)
