@@ -72,7 +72,7 @@ class DeviceUpdater(PHALPlugin):
         self.bus.on("neon.update_squashfs", self.update_squashfs)
 
     @property
-    def initramfs_md5(self) -> Optional[str]:
+    def initramfs_hash(self) -> Optional[str]:
         if not self._initramfs_hash:
             try:
                 Popen("mount_firmware", shell=True).wait(5)
@@ -106,7 +106,7 @@ class DeviceUpdater(PHALPlugin):
             return self._get_initramfs_latest()
         new_hash = md5_request.text.split('\n')[0]
 
-        if new_hash == self._initramfs_hash:
+        if new_hash == self.initramfs_hash:
             LOG.info("initramfs not changed")
             return False
         LOG.info("initramfs update available")
@@ -133,7 +133,7 @@ class DeviceUpdater(PHALPlugin):
             with open(self.initramfs_update_path, 'wb+') as f:
                 f.write(initramfs_request.content)
 
-        if new_hash == self._initramfs_hash:
+        if new_hash == self.initramfs_hash:
             LOG.info("initramfs not changed. Removing downloaded file.")
             remove(self.initramfs_update_path)
             return False
