@@ -52,7 +52,7 @@ class DeviceUpdater(PHALPlugin):
                                              "neon_debos/raw/dev/overlays/"
                                              "02-rpi4/boot/firmware/initramfs")
         self.initramfs_real_path = self.config.get("initramfs_path",
-                                                   "/opt/neon/initramfs")
+                                                   "/opt/neon/firmware/initramfs")
         self.initramfs_update_path = self.config.get("initramfs_upadate_path",
                                                      "/opt/neon/initramfs")
         self.squashfs_url = self.config.get("squashfs_url",
@@ -266,14 +266,14 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.update_initramfs` Message
         """
         try:
-            LOG.info("Checking initramfs update")
+            LOG.info("Performing initramfs update")
             if not isfile(self.initramfs_real_path) and \
                     not message.data.get("force_update"):
                 LOG.debug("No initramfs to update")
                 response = message.response({"updated": None,
                                              "error": "No initramfs to update"})
             elif not self._get_initramfs_latest():
-                LOG.debug("No initramfs update")
+                LOG.info("No initramfs update")
                 response = message.response({"updated": False})
             else:
                 LOG.debug("Updating initramfs")
