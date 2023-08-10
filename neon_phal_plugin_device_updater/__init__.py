@@ -84,6 +84,7 @@ class DeviceUpdater(PHALPlugin):
                 if isfile(self.initramfs_real_path):
                     with open(self.initramfs_real_path, "rb") as f:
                         self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
+        LOG.debug(f"hash={self._initramfs_hash}")
         return self._initramfs_hash
 
     @property
@@ -112,7 +113,7 @@ class DeviceUpdater(PHALPlugin):
             LOG.warning("Unable to get md5; downloading latest initramfs")
             return self._get_initramfs_latest()
         new_hash = md5_request.text.split('\n')[0]
-
+        LOG.debug(f"new_hash={new_hash}")
         if new_hash == self.initramfs_hash:
             LOG.info("initramfs not changed")
             return False
