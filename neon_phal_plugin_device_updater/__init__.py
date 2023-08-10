@@ -46,10 +46,9 @@ class DeviceUpdater(PHALPlugin):
     def __init__(self, bus=None, name="neon-phal-plugin-device-updater",
                  config=None):
         PHALPlugin.__init__(self, bus, name, config)
-        # TODO: Automate uploads or forwarding to account for repo changes
         self.initramfs_url = self.config.get("initramfs_url",
                                              "https://github.com/NeonGeckoCom/"
-                                             "neon_debos/raw/dev/overlays/"
+                                             "neon_debos/raw/{}/overlays/"
                                              "02-rpi4/boot/firmware/initramfs")
         self.initramfs_real_path = self.config.get("initramfs_path",
                                                    "/opt/neon/firmware/initramfs")
@@ -58,10 +57,11 @@ class DeviceUpdater(PHALPlugin):
         self.squashfs_url = self.config.get("squashfs_url",
                                             "https://2222.us/app/files/"
                                             "neon_images/pi/mycroft_mark_2/"
-                                            "updates/")
+                                            "updates/{}/")
         self.squashfs_path = self.config.get("squashfs_path",
                                              "/opt/neon/update.squashfs")
 
+        self._default_branch = "master"
         self._build_info = None
         self._initramfs_hash = None
 
@@ -96,14 +96,17 @@ class DeviceUpdater(PHALPlugin):
                 self._build_info = dict()
         return self._build_info
 
-    def _check_initramfs_update_available(self) -> bool:
+    def _check_initramfs_update_available(self, branch: str = None) -> bool:
         """
         Check if there is a newer initramfs version available by comparing MD5
+        @param branch: branch to format into initramfs_url
         @return: True if a newer initramfs is available to download
         """
+        branch = branch or self._default_branch
         if not self.initramfs_url:
             raise RuntimeError("No initramfs_url configured")
-        md5_request = requests.get(f"{self.initramfs_url}.md5")
+        initramfs_url = self.initramfs_url.format(branch)
+        md5_request = requests.get(f"{initramfs_url}.md5")
         if not md5_request.ok:
             LOG.warning("Unable to get md5; downloading latest initramfs")
             return self._get_initramfs_latest()
@@ -115,12 +118,14 @@ class DeviceUpdater(PHALPlugin):
         LOG.info("initramfs update available")
         return True
 
-    def _get_initramfs_latest(self) -> bool:
+    def _get_initramfs_latest(self, branch: str = None) -> bool:
         """
         Get the latest initramfs image and check if it is different from the
         current installed initramfs
+        @param branch: branch to format into initramfs_url
         @return: True if the downloaded initramfs file is different from current
         """
+        branch = branch or self._default_branch
         if not self.initramfs_url:
             raise RuntimeError("No initramfs_url configured")
         if isfile(self.initramfs_update_path):
@@ -128,10 +133,11 @@ class DeviceUpdater(PHALPlugin):
             with open(self.initramfs_update_path, 'rb') as f:
                 new_hash = hashlib.md5(f.read()).hexdigest()
         else:
-            initramfs_request = requests.get(self.initramfs_url)
+            initramfs_url = self.initramfs_url.format(branch)
+            initramfs_request = requests.get(initramfs_url)
             if not initramfs_request.ok:
                 raise ConnectionError(f"Unable to get updated initramfs from: "
-                                      f"{self.initramfs_url}")
+                                      f"{initramfs_url}")
             new_hash = hashlib.md5(initramfs_request.content).hexdigest()
             with open(self.initramfs_update_path, 'wb+') as f:
                 f.write(initramfs_request.content)
@@ -162,16 +168,19 @@ class DeviceUpdater(PHALPlugin):
             # Parse failure, assume there's an update
             return True
 
-    def _check_squashfs_update_available(self) -> Optional[Tuple[str, str]]:
+    def _check_squashfs_update_available(self, track: str = None) \
+            -> Optional[Tuple[str, str]]:
         """
         Check if a newer squashFS image is available and return the new version
         and download link.
+        @param track: Update track (subdirectory) to check
         @return: new version and download link if available, else None
         """
+        track = track or self._default_branch
         # Get all available update files from the configured URL
         ext = '.squashfs'
         prefix = self.build_info.get("base_os", {}).get("name", "")
-        links = scrape_page_for_links(self.squashfs_url)
+        links = scrape_page_for_links(self.squashfs_url.format(track))
         valid_links = [(name, uri) for name, uri in links.items()
                        if name.endswith(ext) and name.startswith(prefix)]
         valid_links.sort(key=lambda k: k[0], reverse=True)
@@ -192,13 +201,15 @@ class DeviceUpdater(PHALPlugin):
             LOG.info(f"Installed image ({installed_image_time}) is newer "
                      f"than latest ({new_image_time})")
 
-    def _get_squashfs_latest(self) -> Optional[str]:
+    def _get_squashfs_latest(self, track: str = None) -> Optional[str]:
         """
         Get the latest squashfs image if different from the installed version
+        @param track: update track (subdirectory) to check
         @return: path to downloaded update if present, else None
         """
+        track = track or self._default_branch
         # Check for an available update
-        update = self._check_squashfs_update_available()
+        update = self._check_squashfs_update_available(track)
         if not update:
             # Already updated
             return None
@@ -232,16 +243,20 @@ class DeviceUpdater(PHALPlugin):
         Handle a request to check for initramfs updates
         @param message: `neon.check_update_initramfs` Message
         """
-        update_available = self._check_initramfs_update_available()
-        self.bus.emit(message.response({"update_available": update_available}))
+        branch = message.data.get("track") or self._default_branch
+        update_available = self._check_initramfs_update_available(branch)
+        self.bus.emit(message.response({"update_available": update_available,
+                                        "branch": branch}))
 
     def check_update_squashfs(self, message: Message):
         """
         Handle a request to check for squash updates
         @param message: `neon.check_update_squashfs` Message
         """
-        update_available = self._check_squashfs_update_available() is not None
-        self.bus.emit(message.response({"update_available": update_available}))
+        track = message.data.get("track") or self._default_branch
+        update_available = self._check_squashfs_update_available(track) is not None
+        self.bus.emit(message.response({"update_available": update_available,
+                                        "track": track}))
 
     def update_squashfs(self, message: Message):
         """
@@ -249,8 +264,9 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.update_squashfs` Message
         """
         try:
-            LOG.info("Checking squashfs update")
-            update = self._get_squashfs_latest()
+            track = message.data.get("track") or self._default_branch
+            LOG.info(f"Checking squashfs update: {track}")
+            update = self._get_squashfs_latest(track)
             if update:
                 LOG.info("Update available and will be installed on restart")
                 shutil.copyfile(update, self.squashfs_path)
@@ -269,13 +285,14 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.update_initramfs` Message
         """
         try:
+            branch = message.data.get("track") or self._default_branch
             LOG.info("Performing initramfs update")
             if not isfile(self.initramfs_real_path) and \
                     not message.data.get("force_update"):
                 LOG.debug("No initramfs to update")
                 response = message.response({"updated": None,
                                              "error": "No initramfs to update"})
-            elif not self._get_initramfs_latest():
+            elif not self._get_initramfs_latest(branch):
                 LOG.info("No initramfs update")
                 response = message.response({"updated": False})
             else:
