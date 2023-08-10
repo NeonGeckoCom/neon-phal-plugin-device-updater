@@ -61,7 +61,8 @@ class DeviceUpdater(PHALPlugin):
         self.squashfs_path = self.config.get("squashfs_path",
                                              "/opt/neon/update.squashfs")
 
-        self._default_branch = "master"
+        # TODO: Update default_branch to "master" before stable release
+        self._default_branch = "dev"
         self._build_info = None
         self._initramfs_hash = None
 
