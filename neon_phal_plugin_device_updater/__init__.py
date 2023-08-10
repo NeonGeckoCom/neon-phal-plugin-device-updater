@@ -110,7 +110,8 @@ class DeviceUpdater(PHALPlugin):
         initramfs_url = self.initramfs_url.format(branch)
         md5_request = requests.get(f"{initramfs_url}.md5")
         if not md5_request.ok:
-            LOG.warning("Unable to get md5; downloading latest initramfs")
+            LOG.warning(f"Unable to get md5 from {md5_request.url}; "
+                        f"downloading latest initramfs")
             return self._get_initramfs_latest()
         new_hash = md5_request.text.split('\n')[0]
         LOG.debug(f"new_hash={new_hash}")
@@ -136,6 +137,7 @@ class DeviceUpdater(PHALPlugin):
                 new_hash = hashlib.md5(f.read()).hexdigest()
         else:
             initramfs_url = self.initramfs_url.format(branch)
+            LOG.debug(f"Getting initramfs from {initramfs_url}")
             initramfs_request = requests.get(initramfs_url)
             if not initramfs_request.ok:
                 raise ConnectionError(f"Unable to get updated initramfs from: "
