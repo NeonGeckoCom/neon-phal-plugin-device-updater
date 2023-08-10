@@ -25,7 +25,7 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+import logging
 import unittest
 import requests
 
@@ -33,6 +33,9 @@ from os import remove
 from os.path import isfile, basename, join, dirname
 from neon_phal_plugin_device_updater import DeviceUpdater
 from ovos_utils.messagebus import FakeBus
+from ovos_utils.log import LOG
+
+LOG.level = logging.DEBUG
 
 
 class PluginTests(unittest.TestCase):
@@ -51,7 +54,9 @@ class PluginTests(unittest.TestCase):
 
         # Explicitly get valid initramfs
         with open(self.plugin.initramfs_real_path, 'wb') as f:
-            f.write(requests.get(self.plugin.initramfs_url).content)
+            f.write(requests.get(
+                self.plugin.initramfs_url.format(
+                    self.plugin._default_branch)).content)
         self.plugin._initramfs_hash = None
         self.assertFalse(self.plugin._check_initramfs_update_available())
 
