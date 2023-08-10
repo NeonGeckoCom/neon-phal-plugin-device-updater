@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a8](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a8) (2023-08-10)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a7...0.0.1a8)
+
+**Merged pull requests:**
+
+- Support update URL string templates [\#7](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/7) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.1a7](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a7) (2023-08-09)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a6...0.0.1a7)
