@@ -73,6 +73,9 @@ class DeviceUpdater(PHALPlugin):
 
     @property
     def initramfs_hash(self) -> Optional[str]:
+        """
+        Get the MD5 hash of the currently installed InitramFS
+        """
         if not self._initramfs_hash:
             try:
                 Popen("mount_firmware", shell=True).wait(5)
@@ -88,6 +91,9 @@ class DeviceUpdater(PHALPlugin):
 
     @property
     def build_info(self) -> dict:
+        """
+        Get dict build information if available
+        """
         if self._build_info is None:
             try:
                 with open("/opt/neon/build_info.json") as f:
