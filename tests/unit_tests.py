@@ -42,7 +42,15 @@ class PluginTests(unittest.TestCase):
     bus = FakeBus()
     plugin = DeviceUpdater(bus)
 
-    def test_build_info(self):
+    def test_00_init(self):
+        self.assertIsInstance(self.plugin.initramfs_url, str)
+        self.assertIsInstance(self.plugin.initramfs_real_path, str)
+        self.assertIsInstance(self.plugin.initramfs_update_path, str)
+        self.assertIsInstance(self.plugin.squashfs_url, str)
+        self.assertIsInstance(self.plugin.squashfs_path, str)
+
+        self.plugin._default_branch = "dev"
+        self.assertIsNone(self.plugin.initramfs_hash)
         self.assertIsInstance(self.plugin.build_info, dict)
 
     def test_check_initramfs_update_available(self):

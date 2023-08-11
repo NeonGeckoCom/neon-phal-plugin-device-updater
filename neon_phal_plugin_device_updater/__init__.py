@@ -61,8 +61,7 @@ class DeviceUpdater(PHALPlugin):
         self.squashfs_path = self.config.get("squashfs_path",
                                              "/opt/neon/update.squashfs")
 
-        # TODO: Update default_branch to "master" before stable release
-        self._default_branch = "dev"
+        self._default_branch = self.config.get("default_track") or "master"
         self._build_info = None
         self._initramfs_hash = None
 
@@ -74,6 +73,9 @@ class DeviceUpdater(PHALPlugin):
 
     @property
     def initramfs_hash(self) -> Optional[str]:
+        """
+        Get the MD5 hash of the currently installed InitramFS
+        """
         if not self._initramfs_hash:
             try:
                 Popen("mount_firmware", shell=True).wait(5)
@@ -89,6 +91,9 @@ class DeviceUpdater(PHALPlugin):
 
     @property
     def build_info(self) -> dict:
+        """
+        Get dict build information if available
+        """
         if self._build_info is None:
             try:
                 with open("/opt/neon/build_info.json") as f:
@@ -254,7 +259,7 @@ class DeviceUpdater(PHALPlugin):
         branch = message.data.get("track") or self._default_branch
         update_available = self._check_initramfs_update_available(branch)
         self.bus.emit(message.response({"update_available": update_available,
-                                        "branch": branch}))
+                                        "track": branch}))
 
     def check_update_squashfs(self, message: Message):
         """
