@@ -1,0 +1,5 @@
+requests
+neon-utils[network]~=1.6
+ovos-plugin-manager~=0.0.20
+ovos-bus-client~=0.0.3
+ovos-utils~=0.0.30
