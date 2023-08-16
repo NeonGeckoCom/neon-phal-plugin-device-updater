@@ -32,7 +32,7 @@ import shutil
 import requests
 
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from os import remove
 from os.path import isfile, join, dirname
 from subprocess import Popen
@@ -162,17 +162,30 @@ class DeviceUpdater(PHALPlugin):
         return True
 
     @staticmethod
-    def check_version_is_newer(current: str, latest: str) -> bool:
+    def check_version_is_newer(current: Union[str, int, float],
+                               latest: Union[str, int, float]) -> bool:
         """
         Compare two image versions to check if an update is available
-        @param current: currently installed version string
+        @param current: currently installed version (timestamp or formatted)
         @param latest: latest available version from remote
         @return: True if latest is newer than current
         """
         try:
             date_format = "%Y-%m-%d_%H_%M"
-            current_datetime = datetime.strptime(current, date_format)
-            latest_datetime = datetime.strptime(latest, date_format)
+            if isinstance(current, str):
+                current_datetime = datetime.strptime(current, date_format)
+            elif isinstance(current, (int, float)):
+                current_datetime = datetime.fromtimestamp(current)
+            else:
+                raise TypeError(f"Expected formatted time or timestamp. "
+                                f"Got: {current}")
+            if isinstance(latest, str):
+                latest_datetime = datetime.strptime(latest, date_format)
+            elif isinstance(latest, (int, float)):
+                latest_datetime = datetime.fromtimestamp(latest)
+            else:
+                raise TypeError(f"Expected formatted time or timestamp. "
+                                f"Got: {latest}")
             if latest_datetime > current_datetime:
                 return True
             return False
