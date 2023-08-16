@@ -27,6 +27,8 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import logging
 import unittest
+from time import time
+
 import requests
 
 from os import remove
@@ -110,6 +112,14 @@ class PluginTests(unittest.TestCase):
                                                            new_version))
         self.assertFalse(self.plugin.check_version_is_newer(new_version,
                                                             new_version))
+
+        # Test Timestamp
+        now_time = time()
+        self.assertFalse(self.plugin.check_version_is_newer(now_time,
+                                                            old_version))
+        self.assertTrue(self.plugin.check_version_is_newer(old_version,
+                                                           now_time))
+
         # Test default behavior
         self.assertTrue(self.plugin.check_version_is_newer("2022", "2023"))
 
