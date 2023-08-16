@@ -1,68 +1,12 @@
 # Changelog
 
-## [0.0.1a9](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a9) (2023-08-11)
+## [0.0.2a1](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.2a1) (2023-08-16)
 
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a8...0.0.1a9)
-
-**Merged pull requests:**
-
-- Documentation and minor cleanup [\#8](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/8) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a8](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a8) (2023-08-10)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a7...0.0.1a8)
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1...0.0.2a1)
 
 **Merged pull requests:**
 
-- Support update URL string templates [\#7](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/7) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a7](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a7) (2023-08-09)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a6...0.0.1a7)
-
-**Merged pull requests:**
-
-- Update InitramFS Hash Checks [\#6](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/6) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a6](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a6) (2023-08-08)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a5...0.0.1a6)
-
-**Merged pull requests:**
-
-- Handle edge case where initramfs\_real\_path doesn't exist [\#5](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/5) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a5](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a5) (2023-08-05)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a4...0.0.1a5)
-
-**Merged pull requests:**
-
-- Unit Tests, Docstrings, and Improved Checks [\#4](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/4) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a4](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a4) (2023-08-02)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a3...0.0.1a4)
-
-**Merged pull requests:**
-
-- Check initramFS update by MD5 [\#3](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/3) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a3](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a3) (2023-07-31)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.0.1a2...0.0.1a3)
-
-**Merged pull requests:**
-
-- Add messagebus API to check update availability [\#2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/2) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.1a2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.0.1a2) (2023-07-28)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/b8be47ee79c26933a50c9e8a79cf0f358578628f...0.0.1a2)
-
-**Merged pull requests:**
-
-- Plugin Initial Implementation [\#1](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/1) ([NeonDaniel](https://github.com/NeonDaniel))
+- More flexible metadata handling [\#10](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/10) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
