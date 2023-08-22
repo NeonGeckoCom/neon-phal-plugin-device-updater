@@ -206,11 +206,12 @@ class DeviceUpdater(PHALPlugin):
         # Get all available update files from the configured URL
         ext = '.squashfs'
         prefix = self.build_info.get("base_os", {}).get("name", "")
-        links = scrape_page_for_links(self.squashfs_url.format(track))
+        remote = self.squashfs_url.format(track)
+        links = scrape_page_for_links(remote)
         valid_links = [(name, uri) for name, uri in links.items()
                        if name.endswith(ext) and name.startswith(prefix)]
         valid_links.sort(key=lambda k: k[0], reverse=True)
-        LOG.debug(f"Got versions: {valid_links}")
+        LOG.debug(f"Got versions from {remote}: {valid_links}")
         newest_version = valid_links[0][0]
         download_url = valid_links[0][1]
 
