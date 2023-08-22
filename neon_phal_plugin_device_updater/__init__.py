@@ -210,6 +210,7 @@ class DeviceUpdater(PHALPlugin):
         valid_links = [(name, uri) for name, uri in links.items()
                        if name.endswith(ext) and name.startswith(prefix)]
         valid_links.sort(key=lambda k: k[0], reverse=True)
+        LOG.debug(f"Got versions: {valid_links}")
         newest_version = valid_links[0][0]
         download_url = valid_links[0][1]
 
