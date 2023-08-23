@@ -221,7 +221,7 @@ class DeviceUpdater(PHALPlugin):
 
         # Compare latest version with current
         if installed_image_time == new_image_time:
-            LOG.info(f"Already Updated ({new_image_time}")
+            LOG.info(f"Already Updated ({new_image_time})")
         elif self.check_version_is_newer(installed_image_time, new_image_time):
             LOG.info(f"New squashFS: {newest_version}")
             return newest_version, download_url
@@ -282,8 +282,29 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.check_update_squashfs` Message
         """
         track = message.data.get("track") or self._default_branch
-        update_available = self._check_squashfs_update_available(track) is not None
+        response = self._check_squashfs_update_available(track)
+
+        if response:
+            update_available = True
+            new_version, download_url = response
+            # Get metadata for new version
+            meta_url = download_url.replace(".squashfs", ".json")
+            try:
+                resp = requests.get(meta_url)
+                if resp.ok:
+                    update_meta = resp.json()
+                else:
+                    LOG.warning(f"Unable to get metadata: {resp.status_code}")
+                    update_meta = dict()
+            except Exception as e:
+                LOG.exception(e)
+                update_meta = dict()
+        else:
+            update_available = False
+            update_meta = None
+
         self.bus.emit(message.response({"update_available": update_available,
+                                        "update_metadata": update_meta,
                                         "track": track}))
 
     def update_squashfs(self, message: Message):
