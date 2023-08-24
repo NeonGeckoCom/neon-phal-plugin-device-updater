@@ -31,9 +31,10 @@ import json
 import shutil
 import requests
 
+from tempfile import gettempdir
 from datetime import datetime
 from typing import Optional, Tuple, Union
-from os import remove
+from os import remove, makedirs
 from os.path import isfile, join, dirname
 from subprocess import Popen
 from ovos_bus_client.message import Message
@@ -50,6 +51,15 @@ class DeviceUpdater(PHALPlugin):
                                              "https://github.com/NeonGeckoCom/"
                                              "neon_debos/raw/{}/overlays/"
                                              "02-rpi4/boot/firmware/initramfs")
+        self.configtxt_url = self.config.get("config_txt_url",
+                                             "https://github.com/NeonGeckoCom/"
+                                             "neon_debos/raw/{}/overlays/"
+                                             "02-rpi4/boot/firmware/config.txt")
+        self.cmdlinetxt_url = self.config.get("cmdline_txt_url",
+                                              "https://github.com/NeonGeckoCom/"
+                                              "neon_debos/raw/{}/overlays/"
+                                              "02-rpi4/boot/firmware/"
+                                              "cmdline.txt")
         self.initramfs_real_path = self.config.get("initramfs_path",
                                                    "/opt/neon/firmware/initramfs")
         self.initramfs_update_path = self.config.get("initramfs_upadate_path",
@@ -66,6 +76,8 @@ class DeviceUpdater(PHALPlugin):
         self._initramfs_hash = None
 
         # Register messagebus listeners
+        self.bus.on("neon.check_update_firmware", self.check_update_firmware)
+        self.bus.on("neon.update_firmware", self.update_firmware)
         self.bus.on("neon.check_update_initramfs", self.check_update_initramfs)
         self.bus.on("neon.update_initramfs", self.update_initramfs)
         self.bus.on("neon.check_update_squashfs", self.check_update_squashfs)
@@ -77,15 +89,8 @@ class DeviceUpdater(PHALPlugin):
         Get the MD5 hash of the currently installed InitramFS
         """
         if not self._initramfs_hash:
-            try:
-                Popen("mount_firmware", shell=True).wait(5)
-                with open(self.initramfs_real_path, "rb") as f:
-                    self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
-            except Exception as e:
-                LOG.error(e)
-                if isfile(self.initramfs_real_path):
-                    with open(self.initramfs_real_path, "rb") as f:
-                        self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
+            self._initramfs_hash = \
+                self._get_firmware_file_hash(self.initramfs_real_path)
         LOG.debug(f"hash={self._initramfs_hash}")
         return self._initramfs_hash
 
@@ -102,6 +107,32 @@ class DeviceUpdater(PHALPlugin):
                 LOG.error(f"Failed to get build info: {e}")
                 self._build_info = dict()
         return self._build_info
+
+    @staticmethod
+    def _get_firmware_file_hash(file: str):
+        """
+        Get the md5 hash of a file on the firmware partition
+        @param file: path relative to the firmware partition root
+        @return: string file hash
+        """
+        check_path = file if file.startswith("/") else \
+            join("/opt/neon/firmware", file)
+        try:
+            Popen("mount_firmware", shell=True).wait(5)
+            with open(check_path, "rb") as f:
+                file_hash = hashlib.md5(f.read()).hexdigest()
+        except Exception as e:
+            LOG.error(e)
+            if isfile(check_path):
+                with open(check_path, "rb") as f:
+                    file_hash = hashlib.md5(f.read()).hexdigest()
+        finally:
+            try:
+                Popen("unmount_firmware", shell=True).wait(5)
+            except Exception as e:
+                LOG.error(e)
+        LOG.info(f"{check_path} | {file_hash}")
+        return file_hash
 
     def _check_initramfs_update_available(self, branch: str = None) -> bool:
         """
@@ -129,6 +160,40 @@ class DeviceUpdater(PHALPlugin):
             return False
         LOG.info("initramfs update available")
         return True
+
+    def _check_firmware_updates_available(self, branch: str = None) -> dict:
+        """
+        Check for any known firmware partition file updates
+        @param branch: branch to format into initramfs_url
+        @return: dict of updated firmware files to local cached location
+        """
+        branch = branch or self._default_branch
+        updates = dict()
+        temp_dir = join(gettempdir(), "neon")
+        makedirs(temp_dir, exist_ok=True)
+        config_file = join(temp_dir, "config.txt")
+        cmdline_file = join(temp_dir, "cmdline.txt")
+        if self.configtxt_url:
+            new_config = requests.get(self.configtxt_url.format(branch))
+            if new_config.ok:
+                with open(config_file, 'wb+') as f:
+                    f.write(new_config.content)
+            old_configtxt = self._get_firmware_file_hash("config.txt")
+            new_configtxt = self._get_firmware_file_hash(config_file)
+            if old_configtxt != new_configtxt:
+                LOG.info("config.txt update available")
+                updates["config.txt"] = config_file
+        if self.cmdlinetxt_url:
+            new_config = requests.get(self.cmdlinetxt_url.format(branch))
+            if new_config.ok:
+                with open(cmdline_file, 'wb+') as f:
+                    f.write(new_config.content)
+            old_cmdline = self._get_firmware_file_hash("cmdline.txt")
+            new_cmdline = self._get_firmware_file_hash(cmdline_file)
+            if old_cmdline != new_cmdline:
+                LOG.info("cmdline.txt update available")
+                updates["cmdline.txt"] = cmdline_file
+        return updates
 
     def _get_initramfs_latest(self, branch: str = None) -> bool:
         """
@@ -266,6 +331,18 @@ class DeviceUpdater(PHALPlugin):
             if isfile(temp_dl_path):
                 remove(temp_dl_path)
 
+    def check_update_firmware(self, message: Message):
+        """
+        Handle a request to check for any firmware partition file updates
+        @param message: `neon.check_update_firmware` Message
+        """
+        branch = message.data.get("track") or self._default_branch
+        initramfs_stat = self._check_initramfs_update_available(branch)
+        updated_files = self._check_firmware_updates_available(branch)
+        updated_files["initramfs"] = initramfs_stat
+        self.bus.emit(message.response({"track": branch,
+                                        "files": updated_files}))
+
     def check_update_initramfs(self, message: Message):
         """
         Handle a request to check for initramfs updates
@@ -360,4 +437,29 @@ class DeviceUpdater(PHALPlugin):
             LOG.error(e)
             response = message.response({"updated": None,
                                          "error": repr(e)})
+        self.bus.emit(response)
+
+    def update_firmware(self, message):
+        files_to_update = message.data.get("files")
+        error = False
+        updated = []
+        for fw_path, upd_path in files_to_update.items():
+            try:
+                proc = Popen(["/opt/neon/update_firmware_file.sh",
+                              upd_path, fw_path], shell=True)
+                success = proc.wait(30) == 0
+                LOG.debug(proc.stdout)
+                if success:
+                    updated.append(fw_path)
+                else:
+                    LOG.error(proc.stderr)
+                    error = proc.stderr
+            except Exception as e:
+                LOG.error(e)
+                error = e
+        if error:
+            response = message.response({"updated": updated,
+                                         "error": repr(error)})
+        else:
+            response = message.response({"updated": updated})
         self.bus.emit(response)
