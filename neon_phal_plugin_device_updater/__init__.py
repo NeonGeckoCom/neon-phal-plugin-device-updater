@@ -117,6 +117,7 @@ class DeviceUpdater(PHALPlugin):
         """
         check_path = file if file.startswith("/") else \
             join("/opt/neon/firmware", file)
+        file_hash = None
         try:
             Popen("mount_firmware", shell=True).wait(5)
             with open(check_path, "rb") as f:
