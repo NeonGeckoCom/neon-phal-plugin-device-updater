@@ -60,8 +60,8 @@ class DeviceUpdater(PHALPlugin):
                                               "neon_debos/raw/{}/overlays/"
                                               "02-rpi4/boot/firmware/"
                                               "cmdline.txt")
-        self.initramfs_real_path = self.config.get("initramfs_path",
-                                                   "/opt/neon/firmware/initramfs")
+        self.initramfs_real_path = self.config.get(
+            "initramfs_path", "/opt/neon/firmware/initramfs")
         self.initramfs_update_path = self.config.get("initramfs_upadate_path",
                                                      "/opt/neon/initramfs")
         self.squashfs_url = self.config.get("squashfs_url",
@@ -159,7 +159,8 @@ class DeviceUpdater(PHALPlugin):
         if new_hash == self.initramfs_hash:
             LOG.info("initramfs not changed")
             return False
-        LOG.info("initramfs update available")
+        LOG.info(f"initramfs update available (new={new_hash}|"
+                 f"old={self.initramfs_hash}")
         return True
 
     def _check_firmware_updates_available(self, branch: str = None) -> dict:
