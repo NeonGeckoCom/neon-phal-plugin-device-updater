@@ -54,6 +54,7 @@ class DeviceUpdater(PHALPlugin):
                                                    "/opt/neon/firmware/initramfs")
         self.initramfs_update_path = self.config.get("initramfs_upadate_path",
                                                      "/opt/neon/initramfs")
+        # TODO: Update to reference neon-os repo releases
         self.squashfs_url = self.config.get("squashfs_url",
                                             "https://2222.us/app/files/"
                                             "neon_images/pi/mycroft_mark_2/"
@@ -127,7 +128,8 @@ class DeviceUpdater(PHALPlugin):
         if new_hash == self.initramfs_hash:
             LOG.info("initramfs not changed")
             return False
-        LOG.info("initramfs update available")
+        LOG.info(f"initramfs update available (new={new_hash}|"
+                 f"old={self.initramfs_hash}")
         return True
 
     def _get_initramfs_latest(self, branch: str = None) -> bool:
@@ -194,7 +196,7 @@ class DeviceUpdater(PHALPlugin):
             # Parse failure, assume there's an update
             return True
 
-    def _check_squashfs_update_available(self, track: str = None) \
+    def _legacy_check_squashfs_update_available(self, track: str = None) \
             -> Optional[Tuple[str, str]]:
         """
         Check if a newer squashFS image is available and return the new version
@@ -237,7 +239,7 @@ class DeviceUpdater(PHALPlugin):
         """
         track = track or self._default_branch
         # Check for an available update
-        update = self._check_squashfs_update_available(track)
+        update = self._legacy_check_squashfs_update_available(track)
         if not update:
             # Already updated
             return None
@@ -282,7 +284,7 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.check_update_squashfs` Message
         """
         track = message.data.get("track") or self._default_branch
-        response = self._check_squashfs_update_available(track)
+        response = self._legacy_check_squashfs_update_available(track)
 
         if response:
             update_available = True

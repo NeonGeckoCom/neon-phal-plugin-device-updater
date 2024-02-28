@@ -125,24 +125,24 @@ class PluginTests(unittest.TestCase):
 
     def test_check_squashfs_update_available(self):
         self.plugin._build_info = dict()
-        version, url = self.plugin._check_squashfs_update_available()
+        version, url = self.plugin._legacy_check_squashfs_update_available()
         self.assertIsInstance(version, str)
         self.assertTrue(url.startswith('http'))
         new_image_time = version.split('_', 1)[1].rsplit('.', 1)[0]
 
         # Current equals remote
         self.plugin._build_info = {"base_os": {"time": new_image_time}}
-        self.assertIsNone(self.plugin._check_squashfs_update_available())
+        self.assertIsNone(self.plugin._legacy_check_squashfs_update_available())
 
         # Current newer than remote
         new_image_time = f"3000-{new_image_time.split('-', 1)[1]}"
         self.plugin._build_info["base_os"]["time"] = new_image_time
-        self.assertIsNone(self.plugin._check_squashfs_update_available())
+        self.assertIsNone(self.plugin._legacy_check_squashfs_update_available())
 
         # Current older than remote
         old_image_time = f"2020-{new_image_time.split('_', 1)[1]}"
         self.plugin._build_info["base_os"]["time"] = old_image_time
-        version2, url2 = self.plugin._check_squashfs_update_available()
+        version2, url2 = self.plugin._legacy_check_squashfs_update_available()
         self.assertEqual(version, version2)
         self.assertEqual(url, url2)
 
