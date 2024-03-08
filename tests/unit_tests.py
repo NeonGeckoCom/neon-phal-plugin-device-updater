@@ -60,7 +60,7 @@ class PluginTests(unittest.TestCase):
         with open(self.plugin.initramfs_real_path, 'w+') as f:
             f.write("test")
         self.plugin._initramfs_hash = None
-        self.assertTrue(self.plugin._check_initramfs_update_available())
+        self.assertTrue(self.plugin._legacy_check_initramfs_update_available())
 
         # Explicitly get valid initramfs
         with open(self.plugin.initramfs_real_path, 'wb') as f:
@@ -68,7 +68,7 @@ class PluginTests(unittest.TestCase):
                 self.plugin.initramfs_url.format(
                     self.plugin._default_branch)).content)
         self.plugin._initramfs_hash = None
-        self.assertFalse(self.plugin._check_initramfs_update_available())
+        self.assertFalse(self.plugin._legacy_check_initramfs_update_available())
 
         remove(self.plugin.initramfs_real_path)
 
@@ -154,17 +154,54 @@ class PluginTests(unittest.TestCase):
         self.assertFalse(isfile(self.plugin.initramfs_update_path))
 
         # Download valid update
-        file = self.plugin._get_squashfs_latest()
+        file = self.plugin._legacy_get_squashfs_latest()
         self.assertTrue(isfile(file))
 
         # Already downloaded
-        self.assertEqual(self.plugin._get_squashfs_latest(), file)
+        self.assertEqual(self.plugin._legacy_get_squashfs_latest(), file)
 
         # Already updated
         image_name, image_time = basename(file).rsplit('.', 1)[0].split('_', 1)
         self.plugin._build_info = {'base_os': {'name': image_name,
                                                'time': image_time}}
-        self.assertIsNone(self.plugin._get_squashfs_latest())
+        self.assertIsNone(self.plugin._legacy_get_squashfs_latest())
+
+    def test_get_gh_latest_release(self):
+        self.plugin._build_info = {"base_os": {"name": ""}}
+
+        # Validate unknown image
+        with self.assertRaises(RuntimeError):
+            self.plugin._get_gh_latest_release_tag()
+
+        # Validate pre-release
+        self.plugin._build_info['base_os']['name'] = "debian-neon-image-rpi4"
+        latest_dev_release = self.plugin._get_gh_latest_release_tag("dev")
+        self.assertIsInstance(latest_dev_release, str)
+        self.assertTrue("beta" in latest_dev_release)
+
+    def test_get_gh_release_meta_from_tag(self):
+        self.plugin._build_info = {"base_os": {"name": ""}}
+
+        # Validate unknown image
+        with self.assertRaises(RuntimeError):
+            self.plugin._get_gh_release_meta_from_tag("master")
+
+        self.plugin._build_info['base_os']['name'] = "debian-neon-image-rpi4"
+
+        # Validate unknown tag
+        with self.assertRaises(ValueError):
+            self.plugin._get_gh_release_meta_from_tag("00.01.01")
+
+        # Validate valid release
+        tag = "24.02.28.beta1"
+        rpi_meta = self.plugin._get_gh_release_meta_from_tag(tag)
+        self.assertEqual(rpi_meta['version'], '24.02.28b1')
+        self.assertTrue('/rpi4/' in rpi_meta['download_url'])
+
+        self.plugin._build_info['base_os']['name'] = "debian-neon-image-opi5"
+        opi_meta = self.plugin._get_gh_release_meta_from_tag(tag)
+        self.assertEqual(opi_meta['version'], '24.02.28b1')
+        self.assertTrue('/opi5/' in opi_meta['download_url'])
 
     def test_check_update_initramfs(self):
         # TODO
