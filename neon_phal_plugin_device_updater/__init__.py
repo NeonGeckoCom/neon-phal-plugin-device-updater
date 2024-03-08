@@ -68,6 +68,8 @@ class DeviceUpdater(PHALPlugin):
         self.bus.on("neon.update_squashfs", self.update_squashfs)
         self.bus.on("neon.device_updater.check_update",
                     self.check_update_available)
+        self.bus.on("neon.device_updater.get_build_info",
+                    self.get_build_info)
 
     @property
     def squashfs_url(self):
@@ -492,3 +494,10 @@ class DeviceUpdater(PHALPlugin):
         latest_version = self._get_gh_latest_release_tag(track)
         self.bus.emit(message.response({"installed_version": installed_version,
                                         "latest_version": latest_version}))
+
+    def get_build_info(self, message: Message):
+        """
+        Handle a request to check for current OS build info
+        @param message: `neon.device_updater.get_build_info` Message
+        """
+        self.bus.emit(message.response(self.build_info))
