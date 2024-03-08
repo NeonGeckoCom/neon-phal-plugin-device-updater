@@ -48,8 +48,8 @@ class DeviceUpdater(PHALPlugin):
     def __init__(self, bus=None, name="neon-phal-plugin-device-updater",
                  config=None):
         PHALPlugin.__init__(self, bus, name, config)
-        self.initramfs_real_path = self.config.get("initramfs_path",
-                                                   "/opt/neon/firmware/initramfs")
+        self.initramfs_real_path = self.config.get(
+            "initramfs_path", "/opt/neon/firmware/initramfs")
         self.initramfs_update_path = self.config.get("initramfs_upadate_path",
                                                      "/opt/neon/initramfs")
         self.release_repo = self.config.get("release_repo",
@@ -66,6 +66,8 @@ class DeviceUpdater(PHALPlugin):
         self.bus.on("neon.update_initramfs", self.update_initramfs)
         self.bus.on("neon.check_update_squashfs", self.check_update_squashfs)
         self.bus.on("neon.update_squashfs", self.update_squashfs)
+        self.bus.on("neon.device_updater.check_update",
+                    self.check_update_available)
 
     @property
     def squashfs_url(self):
@@ -479,3 +481,14 @@ class DeviceUpdater(PHALPlugin):
             response = message.response({"updated": None,
                                          "error": repr(e)})
         self.bus.emit(response)
+
+    def check_update_available(self, message: Message):
+        """
+        Handle a request to check for OS updates
+        @param message: `neon.device_updater.check_update` Message
+        """
+        track = "beta" if message.data.get("include_prerelease") else "stable"
+        installed_version = self.build_info.get("build_version")
+        latest_version = self._get_gh_latest_release_tag(track)
+        self.bus.emit(message.response({"installed_version": installed_version,
+                                        "latest_version": latest_version}))
