@@ -254,6 +254,7 @@ class DeviceUpdater(PHALPlugin):
                         if chunk:
                             f.write(chunk)
             shutil.move(temp_dl_path, download_path)
+            LOG.info(f"Saved download to {download_path}")
             return download_path
         except Exception as e:
             LOG.exception(e)
@@ -431,7 +432,7 @@ class DeviceUpdater(PHALPlugin):
 
         try:
             if update_file:
-                LOG.info("Update available and will be installed on restart")
+                LOG.info("Update downloaded and will be installed on restart")
                 shutil.copyfile(update_file, self.squashfs_path)
                 response = message.response({"new_version": update_file})
             else:
