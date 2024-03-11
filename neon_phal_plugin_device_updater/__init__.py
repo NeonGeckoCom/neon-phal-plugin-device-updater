@@ -426,7 +426,8 @@ class DeviceUpdater(PHALPlugin):
                     self._get_gh_latest_release_tag(track))
             platform = self.build_info['base_os']['platform']
             download_url = update_metadata['download_url'].replace(
-                f"/{platform}/", f"/{platform}/updates/")
+                f"/{platform}/", f"/{platform}/updates/").replace(".img.xz",
+                                                                  ".squashfs")
             download_path = join(dirname(self.initramfs_update_path),
                                  update_metadata['build_version'])
             if isfile(download_path):
