@@ -78,10 +78,10 @@ class PluginTests(unittest.TestCase):
         self.plugin._initramfs_hash = None
 
         # Check invalid URL
-        self.plugin.initramfs_url = None
+        self.plugin.config["initramfs_url"] = None
         with self.assertRaises(RuntimeError):
             self.plugin._get_initramfs_latest()
-        self.plugin.initramfs_url = real_url
+        self.plugin.config["initramfs_url"] = real_url
 
         # Update already downloaded and applied
         self.plugin._initramfs_hash = None
