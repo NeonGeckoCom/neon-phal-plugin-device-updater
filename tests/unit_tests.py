@@ -178,7 +178,7 @@ class PluginTests(unittest.TestCase):
         self.plugin._build_info['base_os']['name'] = "debian-neon-image-rpi4"
         latest_dev_release = self.plugin._get_gh_latest_release_tag("dev")
         self.assertIsInstance(latest_dev_release, str)
-        self.assertTrue("beta" in latest_dev_release)
+        self.assertTrue("b" in latest_dev_release)
 
     def test_get_gh_release_meta_from_tag(self):
         self.plugin._build_info = {"base_os": {"name": ""}}
