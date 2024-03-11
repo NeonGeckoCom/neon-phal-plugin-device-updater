@@ -34,7 +34,7 @@ import requests
 from datetime import datetime
 from typing import Optional, Tuple, Union
 from os import remove
-from os.path import isfile, join, dirname
+from os.path import isfile, join, dirname, getsize
 from subprocess import Popen
 
 import yaml
@@ -236,10 +236,12 @@ class DeviceUpdater(PHALPlugin):
         return self._stream_download_file(download_url, download_path)
 
     @staticmethod
-    def _stream_download_file(download_url: str, download_path: str) -> str:
+    def _stream_download_file(download_url: str,
+                              download_path: str) -> Optional[str]:
         """
         Download a remote resource to a local path and return the path to the
-        written file
+        written file. This will provide some trivial validation that the output
+        file is an OS update.
         @param download_url: URL of file to download
         @param download_path: path of output file
         @return: actual path to output file
@@ -253,6 +255,12 @@ class DeviceUpdater(PHALPlugin):
                     for chunk in stream.iter_content(4096):
                         if chunk:
                             f.write(chunk)
+            # Update should be > 100MiB
+            file_mib = getsize(temp_dl_path) / 1048576
+            if file_mib < 100:
+                LOG.error(f"Downloaded file is too small ({file_mib}MiB)")
+                remove(temp_dl_path)
+                return
             shutil.move(temp_dl_path, download_path)
             LOG.info(f"Saved download to {download_path}")
             return download_path

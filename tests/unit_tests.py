@@ -27,6 +27,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import logging
 import unittest
+from tempfile import mkstemp
 from time import time
 
 import requests
@@ -218,6 +219,30 @@ class PluginTests(unittest.TestCase):
     def test_update_initramfs(self):
         # TODO
         pass
+
+    def test_stream_download_file(self):
+        valid_os_url = "https://2222.us/app/files/neon_images/test_images/pi_image_3.img.xz"
+        valid_update_file = "https://2222.us/app/files/neon_images/test_images/update_file.squashfs"
+        invalid_update_file = "https://2222.us/app/files/neon_images/test_images/metadata.json"
+        valid_path = "https://2222.us/app/files/neon_images/test_images/"
+        invalid_path = "https://2222.us/app/files/neon_images/invalid_directory/"
+
+        _, output_path = mkstemp()
+        remove(output_path)
+
+        self.plugin._stream_download_file(invalid_update_file, output_path)
+        self.assertFalse(isfile(output_path))
+        self.plugin._stream_download_file(valid_path, output_path)
+        self.assertFalse(isfile(output_path))
+        self.plugin._stream_download_file(invalid_path, output_path)
+        self.assertFalse(isfile(output_path))
+
+        self.plugin._stream_download_file(valid_os_url, output_path)
+        self.assertTrue(isfile(output_path))
+        remove(output_path)
+        self.plugin._stream_download_file(valid_update_file, output_path)
+        self.assertTrue(isfile(output_path))
+        remove(output_path)
 
 
 if __name__ == '__main__':
