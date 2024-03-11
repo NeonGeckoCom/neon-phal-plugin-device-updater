@@ -221,7 +221,7 @@ class PluginTests(unittest.TestCase):
         pass
 
     def test_stream_download_file(self):
-        valid_os_url = "https://2222.us/app/files/neon_images/test_images/pi_image_3.img.xz"
+        valid_os_url = "https://2222.us/app/files/neon_images/test_images/test_os.img.xz"
         valid_update_file = "https://2222.us/app/files/neon_images/test_images/update_file.squashfs"
         invalid_update_file = "https://2222.us/app/files/neon_images/test_images/metadata.json"
         valid_path = "https://2222.us/app/files/neon_images/test_images/"
