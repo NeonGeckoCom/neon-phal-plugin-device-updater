@@ -27,6 +27,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import logging
 import unittest
+from tempfile import mkstemp
 from time import time
 
 import requests
@@ -60,7 +61,7 @@ class PluginTests(unittest.TestCase):
         with open(self.plugin.initramfs_real_path, 'w+') as f:
             f.write("test")
         self.plugin._initramfs_hash = None
-        self.assertTrue(self.plugin._check_initramfs_update_available())
+        self.assertTrue(self.plugin._legacy_check_initramfs_update_available())
 
         # Explicitly get valid initramfs
         with open(self.plugin.initramfs_real_path, 'wb') as f:
@@ -68,7 +69,7 @@ class PluginTests(unittest.TestCase):
                 self.plugin.initramfs_url.format(
                     self.plugin._default_branch)).content)
         self.plugin._initramfs_hash = None
-        self.assertFalse(self.plugin._check_initramfs_update_available())
+        self.assertFalse(self.plugin._legacy_check_initramfs_update_available())
 
         remove(self.plugin.initramfs_real_path)
 
@@ -77,10 +78,10 @@ class PluginTests(unittest.TestCase):
         self.plugin._initramfs_hash = None
 
         # Check invalid URL
-        self.plugin.initramfs_url = None
+        self.plugin.config["initramfs_url"] = None
         with self.assertRaises(RuntimeError):
             self.plugin._get_initramfs_latest()
-        self.plugin.initramfs_url = real_url
+        self.plugin.config["initramfs_url"] = real_url
 
         # Update already downloaded and applied
         self.plugin._initramfs_hash = None
@@ -125,24 +126,24 @@ class PluginTests(unittest.TestCase):
 
     def test_check_squashfs_update_available(self):
         self.plugin._build_info = dict()
-        version, url = self.plugin._check_squashfs_update_available()
+        version, url = self.plugin._legacy_check_squashfs_update_available()
         self.assertIsInstance(version, str)
         self.assertTrue(url.startswith('http'))
         new_image_time = version.split('_', 1)[1].rsplit('.', 1)[0]
 
         # Current equals remote
         self.plugin._build_info = {"base_os": {"time": new_image_time}}
-        self.assertIsNone(self.plugin._check_squashfs_update_available())
+        self.assertIsNone(self.plugin._legacy_check_squashfs_update_available())
 
         # Current newer than remote
         new_image_time = f"3000-{new_image_time.split('-', 1)[1]}"
         self.plugin._build_info["base_os"]["time"] = new_image_time
-        self.assertIsNone(self.plugin._check_squashfs_update_available())
+        self.assertIsNone(self.plugin._legacy_check_squashfs_update_available())
 
         # Current older than remote
         old_image_time = f"2020-{new_image_time.split('_', 1)[1]}"
         self.plugin._build_info["base_os"]["time"] = old_image_time
-        version2, url2 = self.plugin._check_squashfs_update_available()
+        version2, url2 = self.plugin._legacy_check_squashfs_update_available()
         self.assertEqual(version, version2)
         self.assertEqual(url, url2)
 
@@ -154,17 +155,54 @@ class PluginTests(unittest.TestCase):
         self.assertFalse(isfile(self.plugin.initramfs_update_path))
 
         # Download valid update
-        file = self.plugin._get_squashfs_latest()
+        file = self.plugin._legacy_get_squashfs_latest()
         self.assertTrue(isfile(file))
 
         # Already downloaded
-        self.assertEqual(self.plugin._get_squashfs_latest(), file)
+        self.assertEqual(self.plugin._legacy_get_squashfs_latest(), file)
 
         # Already updated
         image_name, image_time = basename(file).rsplit('.', 1)[0].split('_', 1)
         self.plugin._build_info = {'base_os': {'name': image_name,
                                                'time': image_time}}
-        self.assertIsNone(self.plugin._get_squashfs_latest())
+        self.assertIsNone(self.plugin._legacy_get_squashfs_latest())
+
+    def test_get_gh_latest_release(self):
+        self.plugin._build_info = {"base_os": {"name": ""}}
+
+        # Validate unknown image
+        with self.assertRaises(RuntimeError):
+            self.plugin._get_gh_latest_release_tag()
+
+        # Validate pre-release
+        self.plugin._build_info['base_os']['name'] = "debian-neon-image-rpi4"
+        latest_dev_release = self.plugin._get_gh_latest_release_tag("dev")
+        self.assertIsInstance(latest_dev_release, str)
+        self.assertTrue("b" in latest_dev_release)
+
+    def test_get_gh_release_meta_from_tag(self):
+        self.plugin._build_info = {"base_os": {"name": ""}}
+
+        # Validate unknown image
+        with self.assertRaises(RuntimeError):
+            self.plugin._get_gh_release_meta_from_tag("master")
+
+        self.plugin._build_info['base_os']['name'] = "debian-neon-image-rpi4"
+
+        # Validate unknown tag
+        with self.assertRaises(ValueError):
+            self.plugin._get_gh_release_meta_from_tag("00.01.01")
+
+        # Validate valid release
+        tag = "24.02.28.beta1"
+        rpi_meta = self.plugin._get_gh_release_meta_from_tag(tag)
+        self.assertEqual(rpi_meta['version'], '24.02.28b1')
+        self.assertTrue('/rpi4/' in rpi_meta['download_url'])
+
+        self.plugin._build_info['base_os']['name'] = "debian-neon-image-opi5"
+        opi_meta = self.plugin._get_gh_release_meta_from_tag(tag)
+        self.assertEqual(opi_meta['version'], '24.02.28b1')
+        self.assertTrue('/opi5/' in opi_meta['download_url'])
 
     def test_check_update_initramfs(self):
         # TODO
@@ -181,6 +219,30 @@ class PluginTests(unittest.TestCase):
     def test_update_initramfs(self):
         # TODO
         pass
+
+    def test_stream_download_file(self):
+        valid_os_url = "https://2222.us/app/files/neon_images/test_images/test_os.img.xz"
+        valid_update_file = "https://2222.us/app/files/neon_images/test_images/update_file.squashfs"
+        invalid_update_file = "https://2222.us/app/files/neon_images/test_images/metadata.json"
+        valid_path = "https://2222.us/app/files/neon_images/test_images/"
+        invalid_path = "https://2222.us/app/files/neon_images/invalid_directory/"
+
+        _, output_path = mkstemp()
+        remove(output_path)
+
+        self.plugin._stream_download_file(invalid_update_file, output_path)
+        self.assertFalse(isfile(output_path))
+        self.plugin._stream_download_file(valid_path, output_path)
+        self.assertFalse(isfile(output_path))
+        self.plugin._stream_download_file(invalid_path, output_path)
+        self.assertFalse(isfile(output_path))
+
+        self.plugin._stream_download_file(valid_os_url, output_path)
+        self.assertTrue(isfile(output_path))
+        remove(output_path)
+        self.plugin._stream_download_file(valid_update_file, output_path)
+        self.assertTrue(isfile(output_path))
+        remove(output_path)
 
 
 if __name__ == '__main__':
