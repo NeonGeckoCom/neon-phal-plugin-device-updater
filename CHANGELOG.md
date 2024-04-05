@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.1.1a2) (2024-04-05)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.1.1a1...0.1.1a2)
+
+**Merged pull requests:**
+
+- Update ovos-utils dependency spec [\#16](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/16) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a1](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.1.1a1) (2024-03-12)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.1.0...0.1.1a1)
