@@ -362,8 +362,11 @@ class DeviceUpdater(PHALPlugin):
             update_available = meta['initramfs']['md5'] != self.initramfs_hash
         except Exception as e:
             LOG.exception(e)
+            meta = dict()
             update_available = self._legacy_check_initramfs_update_available(branch)
         self.bus.emit(message.response({"update_available": update_available,
+                                        "new_meta": meta.get('initramfs'),
+                                        "current_hash": self.initramfs_hash,
                                         "track": branch}))
 
     def check_update_squashfs(self, message: Message):
