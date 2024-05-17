@@ -283,6 +283,8 @@ class DeviceUpdater(PHALPlugin):
 
         default_time = "2000-01-01T00:00:00Z"
         url = f'https://api.github.com/repos/{self.release_repo}/releases'
+        LOG.debug(f"Getting releases from {self.release_repo}. "
+                  f"prerelease={include_prerelease}")
         releases: list = requests.get(url).json()
         if not include_prerelease:
             releases = [r for r in releases if not r.get('prerelease', True)]
@@ -309,6 +311,7 @@ class DeviceUpdater(PHALPlugin):
                                f"{self.build_info}")
         meta_url = (f"https://raw.githubusercontent.com/{self.release_repo}/"
                     f"{tag}/{installed_os}.yaml")
+        LOG.debug(f"Getting metadata from {meta_url}")
         resp = requests.get(meta_url)
         if not resp.ok:
             raise ValueError(f"Unable to get metadata for tag={tag}")
@@ -358,7 +361,7 @@ class DeviceUpdater(PHALPlugin):
         branch = message.data.get("track") or self._default_branch
         try:
             meta = self._get_gh_release_meta_from_tag(
-                self._get_gh_latest_release_tag(self._default_branch))
+                self._get_gh_latest_release_tag(branch))
             update_available = meta['initramfs']['md5'] != self.initramfs_hash
         except Exception as e:
             LOG.exception(e)
