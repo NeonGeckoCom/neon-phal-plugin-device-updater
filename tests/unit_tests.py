@@ -34,6 +34,9 @@ import requests
 
 from os import remove
 from os.path import isfile, basename, join, dirname
+
+from ovos_bus_client import Message
+
 from neon_phal_plugin_device_updater import DeviceUpdater
 from ovos_utils.messagebus import FakeBus
 from ovos_utils.log import LOG
@@ -205,8 +208,61 @@ class PluginTests(unittest.TestCase):
         self.assertTrue('/opi5/' in opi_meta['download_url'])
 
     def test_check_update_initramfs(self):
-        # TODO
-        pass
+        self.plugin.initramfs_real_path = join(dirname(__file__), "initramfs")
+        with open(self.plugin.initramfs_real_path, 'w+') as f:
+            f.write("test")
+        self.plugin._initramfs_hash = None
+        self.plugin._build_info = {"base_os": {"name": "debian-neon-image-rpi4"}}
+
+        self.assertEqual(self.plugin.release_repo, "NeonGeckoCom/neon-os")
+
+        update_default = Message("neon.check_update_initramfs", {}, {})
+        update_stable = Message("neon.check_update_initramfs",
+                                {"track": "stable"}, {})
+        update_beta = Message("neon.check_update_initramfs",
+                              {"track": "beta"}, {})
+
+        # Test update available
+
+        # Test stable
+        stable_resp = self.bus.wait_for_response(update_stable).data
+        self.assertTrue(stable_resp['update_available'])
+        self.assertEqual(stable_resp['track'], "stable")
+        stable_meta = stable_resp['new_meta']
+        self.assertIsInstance(stable_meta['md5'], str)
+        self.assertIsInstance(stable_meta['path'], str)
+        self.assertEqual(stable_resp['current_hash'], self.plugin.initramfs_hash)
+
+        # Test beta
+        beta_resp = self.bus.wait_for_response(update_beta).data
+        self.assertTrue(beta_resp['update_available'])
+        self.assertEqual(beta_resp['track'], "beta")
+        beta_meta = beta_resp['new_meta']
+        self.assertIsInstance(beta_meta['md5'], str)
+        self.assertIsInstance(beta_meta['path'], str)
+        self.assertEqual(beta_resp['current_hash'], self.plugin.initramfs_hash)
+        self.assertNotEqual(stable_meta, beta_meta)
+
+        # Test default stable
+        self.plugin._default_branch = "master"
+        default_stable = self.bus.wait_for_response(update_default).data
+        self.assertEqual(default_stable, stable_resp)
+
+        # Test default beta
+        self.plugin._default_branch = "dev"
+        default_beta = self.bus.wait_for_response(update_default).data
+        self.assertEqual(default_beta, beta_resp)
+
+        # Test already updated
+        self.plugin._initramfs_hash = stable_meta['md5']
+        stable_resp = self.bus.wait_for_response(update_stable).data
+        self.assertFalse(stable_resp['update_available'])
+
+        self.plugin._initramfs_hash = beta_meta['md5']
+        beta_resp = self.bus.wait_for_response(update_beta).data
+        self.assertFalse(beta_resp['update_available'])
+        
+        remove(self.plugin.initramfs_real_path)
 
     def test_check_update_squashfs(self):
         # TODO

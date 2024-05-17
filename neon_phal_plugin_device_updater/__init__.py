@@ -92,13 +92,11 @@ class DeviceUpdater(PHALPlugin):
         if not self._initramfs_hash:
             try:
                 Popen("mount_firmware", shell=True).wait(5)
-                with open(self.initramfs_real_path, "rb") as f:
-                    self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
             except Exception as e:
                 LOG.error(e)
-                if isfile(self.initramfs_real_path):
-                    with open(self.initramfs_real_path, "rb") as f:
-                        self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
+            if isfile(self.initramfs_real_path):
+                with open(self.initramfs_real_path, "rb") as f:
+                    self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
         LOG.debug(f"hash={self._initramfs_hash}")
         return self._initramfs_hash
 
@@ -358,19 +356,20 @@ class DeviceUpdater(PHALPlugin):
         Handle a request to check for initramfs updates
         @param message: `neon.check_update_initramfs` Message
         """
-        branch = message.data.get("track") or self._default_branch
+        track = message.data.get("track") or self._default_branch
+        track = "beta" if track in ("dev", "beta") else "stable"
         try:
             meta = self._get_gh_release_meta_from_tag(
-                self._get_gh_latest_release_tag(branch))
+                self._get_gh_latest_release_tag(track))
             update_available = meta['initramfs']['md5'] != self.initramfs_hash
         except Exception as e:
             LOG.exception(e)
             meta = dict()
-            update_available = self._legacy_check_initramfs_update_available(branch)
+            update_available = self._legacy_check_initramfs_update_available(track)
         self.bus.emit(message.response({"update_available": update_available,
                                         "new_meta": meta.get('initramfs'),
                                         "current_hash": self.initramfs_hash,
-                                        "track": branch}))
+                                        "track": track}))
 
     def check_update_squashfs(self, message: Message):
         """
