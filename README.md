@@ -54,3 +54,15 @@ Check for an available InitramFS update and emit a response with data:
 ```python
 Message("neon.update_squashfs", {'track': 'dev'})
 ```
+
+### Get Build Info
+Get metadata for currently installed build:
+```python
+Message("neon.device_updater.get_build_info")
+```
+
+### Get Download Status
+Query the plugin if an update is currently downloading:
+```python
+Message("neon.device_updater.get_download_status")
+```
