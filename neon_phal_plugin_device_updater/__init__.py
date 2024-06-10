@@ -77,9 +77,8 @@ class DeviceUpdater(PHALPlugin):
     @property
     def squashfs_url(self):
         log_deprecation("FTP update references are deprecated.", "1.0.0")
-        return self.config.get("squashfs_url", "https://2222.us/app/files/"
-                                               "neon_images/pi/mycroft_mark_2/"
-                                               "updates/{}/")
+        return self.config.get("squashfs_url", "https://download.neonaiservices"
+                                               ".com/core/rpi4/updates/{}/")
 
     @property
     def initramfs_url(self):
