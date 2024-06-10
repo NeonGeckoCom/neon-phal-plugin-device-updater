@@ -60,6 +60,7 @@ class DeviceUpdater(PHALPlugin):
         self._default_branch = self.config.get("default_track") or "master"
         self._build_info = None
         self._initramfs_hash = None
+        self._downloading = False
 
         # Register messagebus listeners
         self.bus.on("neon.check_update_initramfs", self.check_update_initramfs)
@@ -70,13 +71,15 @@ class DeviceUpdater(PHALPlugin):
                     self.check_update_available)
         self.bus.on("neon.device_updater.get_build_info",
                     self.get_build_info)
+        self.bus.on("neon.device_updater.get_download_status",
+                    self.get_download_status)
 
     @property
     def squashfs_url(self):
         log_deprecation("FTP update references are deprecated.", "1.0.0")
-        return self.config.get("squashfs_url", "https://2222.us/app/files/"
-                                               "neon_images/pi/mycroft_mark_2/"
-                                               "updates/{}/")
+        return self.config.get("squashfs_url",
+                               "https://download.neonaiservices.com/neon_os/"
+                               "core/rpi4/updates/{}/")
 
     @property
     def initramfs_url(self):
@@ -233,8 +236,7 @@ class DeviceUpdater(PHALPlugin):
 
         return self._stream_download_file(download_url, download_path)
 
-    @staticmethod
-    def _stream_download_file(download_url: str,
+    def _stream_download_file(self, download_url: str,
                               download_path: str) -> Optional[str]:
         """
         Download a remote resource to a local path and return the path to the
@@ -247,6 +249,7 @@ class DeviceUpdater(PHALPlugin):
         # Download the update
         LOG.info(f"Downloading update from {download_url}")
         temp_dl_path = f"{download_path}.download"
+        self._downloading = True
         try:
             with requests.get(download_url, stream=True) as stream:
                 with open(temp_dl_path, 'wb') as f:
@@ -258,14 +261,17 @@ class DeviceUpdater(PHALPlugin):
             if file_mib < 100:
                 LOG.error(f"Downloaded file is too small ({file_mib}MiB)")
                 remove(temp_dl_path)
+                self._downloading = False
                 return
             shutil.move(temp_dl_path, download_path)
             LOG.info(f"Saved download to {download_path}")
+            self._downloading = False
             return download_path
         except Exception as e:
             LOG.exception(e)
             if isfile(temp_dl_path):
                 remove(temp_dl_path)
+        self._downloading = False
 
     def _get_gh_latest_release_tag(self, track: str = None) -> str:
         """
@@ -433,13 +439,14 @@ class DeviceUpdater(PHALPlugin):
             download_url = update_metadata['download_url'].replace(
                 f"/{platform}/", f"/{platform}/updates/").replace(".img.xz",
                                                                   ".squashfs")
-            download_path = join(dirname(self.initramfs_update_path),
-                                 update_metadata['build_version'])
+            download_path = str(join(dirname(self.initramfs_update_path),
+                                     update_metadata['build_version']))
             if isfile(download_path):
                 LOG.info("Update already downloaded")
-                return download_path
-            update_file = self._stream_download_file(download_url,
-                                                     download_path)
+                update_file = download_path
+            else:
+                update_file = self._stream_download_file(download_url,
+                                                         download_path)
         except Exception as e:
             LOG.exception(f"Failed to get download_url: {e}")
             update_file = self._legacy_get_squashfs_latest(track)
@@ -516,3 +523,10 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.device_updater.get_build_info` Message
         """
         self.bus.emit(message.response(self.build_info))
+
+    def get_download_status(self, message: Message):
+        """
+        Handle a request to check if a download is in-progress
+        @param message: `neon.device_updater.get_download_status` Message
+        """
+        self.bus.emit(message.response(data={"downloading": self._downloading}))

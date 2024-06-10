@@ -28,7 +28,8 @@
 import logging
 import unittest
 from tempfile import mkstemp
-from time import time
+from threading import Thread
+from time import time, sleep
 
 import requests
 
@@ -277,11 +278,11 @@ class PluginTests(unittest.TestCase):
         pass
 
     def test_stream_download_file(self):
-        valid_os_url = "https://2222.us/app/files/neon_images/test_images/test_os.img.xz"
-        valid_update_file = "https://2222.us/app/files/neon_images/test_images/update_file.squashfs"
-        invalid_update_file = "https://2222.us/app/files/neon_images/test_images/metadata.json"
-        valid_path = "https://2222.us/app/files/neon_images/test_images/"
-        invalid_path = "https://2222.us/app/files/neon_images/invalid_directory/"
+        valid_os_url = "https://download.neonaiservices.com/test_images/test_os.img.xz"
+        valid_update_file = "https://download.neonaiservices.com/test_images/update_file.squashfs"
+        invalid_update_file = "https://download.neonaiservices.com/test_images/metadata.json"
+        valid_path = "https://download.neonaiservices.com/test_images/"
+        invalid_path = "https://download.neonaiservices.com/invalid_directory/"
 
         _, output_path = mkstemp()
         remove(output_path)
@@ -292,13 +293,45 @@ class PluginTests(unittest.TestCase):
         self.assertFalse(isfile(output_path))
         self.plugin._stream_download_file(invalid_path, output_path)
         self.assertFalse(isfile(output_path))
+        self.assertFalse(self.plugin._downloading)
 
-        self.plugin._stream_download_file(valid_os_url, output_path)
+        thread = Thread(target=self.plugin._stream_download_file,
+                        args=(valid_os_url, output_path))
+        thread.start()
+        sleep(0.5)
+        self.assertTrue(self.plugin._downloading)
+        thread.join()
         self.assertTrue(isfile(output_path))
+        self.assertFalse(self.plugin._downloading)
         remove(output_path)
-        self.plugin._stream_download_file(valid_update_file, output_path)
+
+        thread = Thread(target=self.plugin._stream_download_file,
+                        args=(valid_update_file, output_path))
+        thread.start()
+        sleep(0.5)
+        self.assertTrue(self.plugin._downloading)
+        thread.join()
         self.assertTrue(isfile(output_path))
+        self.assertFalse(self.plugin._downloading)
         remove(output_path)
+
+    def test_get_build_info(self):
+        resp = self.plugin.bus.wait_for_response(
+            Message("neon.device_updater.get_build_info"))
+        self.assertEqual(resp.data, self.plugin.build_info)
+
+    def test_get_download_status(self):
+        self.assertFalse(self.plugin._downloading)
+        resp = self.plugin.bus.wait_for_response(Message(
+            "neon.device_updater.get_download_status"))
+        self.assertFalse(resp.data['downloading'])
+
+        self.plugin._downloading = True
+        resp = self.plugin.bus.wait_for_response(Message(
+            "neon.device_updater.get_download_status"))
+        self.assertTrue(resp.data['downloading'])
+
+        self.plugin._downloading = False
 
 
 if __name__ == '__main__':
