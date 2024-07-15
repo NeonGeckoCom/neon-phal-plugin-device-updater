@@ -285,14 +285,16 @@ class DeviceUpdater(PHALPlugin):
             valid release
         """
         include_prerelease = (track or self._default_branch) in ("dev", "beta")
-
         default_time = "2000-01-01T00:00:00Z"
         url = f'https://api.github.com/repos/{self.release_repo}/releases'
         LOG.debug(f"Getting releases from {self.release_repo}. "
                   f"prerelease={include_prerelease}")
-        releases: list = requests.get(url).json()
         if not include_prerelease:
-            releases = [r for r in releases if not r.get('prerelease', True)]
+            url = f"{url}/latest"
+            release = requests.get(url).json()
+            return release.get("tag_name")
+
+        releases: list = requests.get(url).json()
         installed_os = self.build_info.get("base_os", {}).get("name")
         if not installed_os:
             raise RuntimeError(f"Unable to determine installed OS from: "
