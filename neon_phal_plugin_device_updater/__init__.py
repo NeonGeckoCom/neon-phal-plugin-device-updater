@@ -125,6 +125,7 @@ class DeviceUpdater(PHALPlugin):
         @return: True if a newer initramfs is available to download
         """
         branch = branch or self._default_branch
+        branch = "master" if branch == "stable" else branch
         if not self.initramfs_url:
             raise RuntimeError("No initramfs_url configured")
         initramfs_url = self.initramfs_url.format(branch)
