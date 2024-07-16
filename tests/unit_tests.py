@@ -28,12 +28,16 @@
 import logging
 import unittest
 from tempfile import mkstemp
-from time import time
+from threading import Thread
+from time import time, sleep
 
 import requests
 
 from os import remove
 from os.path import isfile, basename, join, dirname
+
+from ovos_bus_client import Message
+
 from neon_phal_plugin_device_updater import DeviceUpdater
 from ovos_utils.messagebus import FakeBus
 from ovos_utils.log import LOG
@@ -205,8 +209,61 @@ class PluginTests(unittest.TestCase):
         self.assertTrue('/opi5/' in opi_meta['download_url'])
 
     def test_check_update_initramfs(self):
-        # TODO
-        pass
+        self.plugin.initramfs_real_path = join(dirname(__file__), "initramfs")
+        with open(self.plugin.initramfs_real_path, 'w+') as f:
+            f.write("test")
+        self.plugin._initramfs_hash = None
+        self.plugin._build_info = {"base_os": {"name": "debian-neon-image-rpi4"}}
+
+        self.assertEqual(self.plugin.release_repo, "NeonGeckoCom/neon-os")
+
+        update_default = Message("neon.check_update_initramfs", {}, {})
+        update_stable = Message("neon.check_update_initramfs",
+                                {"track": "stable"}, {})
+        update_beta = Message("neon.check_update_initramfs",
+                              {"track": "beta"}, {})
+
+        # Test update available
+
+        # Test stable
+        stable_resp = self.bus.wait_for_response(update_stable).data
+        self.assertTrue(stable_resp['update_available'])
+        self.assertEqual(stable_resp['track'], "stable")
+        stable_meta = stable_resp['new_meta']
+        self.assertIsInstance(stable_meta['md5'], str)
+        self.assertIsInstance(stable_meta['path'], str)
+        self.assertEqual(stable_resp['current_hash'], self.plugin.initramfs_hash)
+
+        # Test beta
+        beta_resp = self.bus.wait_for_response(update_beta).data
+        self.assertTrue(beta_resp['update_available'])
+        self.assertEqual(beta_resp['track'], "beta")
+        beta_meta = beta_resp['new_meta']
+        self.assertIsInstance(beta_meta['md5'], str)
+        self.assertIsInstance(beta_meta['path'], str)
+        self.assertEqual(beta_resp['current_hash'], self.plugin.initramfs_hash)
+        self.assertNotEqual(stable_meta, beta_meta)
+
+        # Test default stable
+        self.plugin._default_branch = "master"
+        default_stable = self.bus.wait_for_response(update_default).data
+        self.assertEqual(default_stable, stable_resp)
+
+        # Test default beta
+        self.plugin._default_branch = "dev"
+        default_beta = self.bus.wait_for_response(update_default).data
+        self.assertEqual(default_beta, beta_resp)
+
+        # Test already updated
+        self.plugin._initramfs_hash = stable_meta['md5']
+        stable_resp = self.bus.wait_for_response(update_stable).data
+        self.assertFalse(stable_resp['update_available'])
+
+        self.plugin._initramfs_hash = beta_meta['md5']
+        beta_resp = self.bus.wait_for_response(update_beta).data
+        self.assertFalse(beta_resp['update_available'])
+        
+        remove(self.plugin.initramfs_real_path)
 
     def test_check_update_squashfs(self):
         # TODO
@@ -221,11 +278,11 @@ class PluginTests(unittest.TestCase):
         pass
 
     def test_stream_download_file(self):
-        valid_os_url = "https://2222.us/app/files/neon_images/test_images/test_os.img.xz"
-        valid_update_file = "https://2222.us/app/files/neon_images/test_images/update_file.squashfs"
-        invalid_update_file = "https://2222.us/app/files/neon_images/test_images/metadata.json"
-        valid_path = "https://2222.us/app/files/neon_images/test_images/"
-        invalid_path = "https://2222.us/app/files/neon_images/invalid_directory/"
+        valid_os_url = "https://download.neonaiservices.com/test_images/test_os.img.xz"
+        valid_update_file = "https://download.neonaiservices.com/test_images/update_file.squashfs"
+        invalid_update_file = "https://download.neonaiservices.com/test_images/metadata.json"
+        valid_path = "https://download.neonaiservices.com/test_images/"
+        invalid_path = "https://download.neonaiservices.com/invalid_directory/"
 
         _, output_path = mkstemp()
         remove(output_path)
@@ -236,13 +293,45 @@ class PluginTests(unittest.TestCase):
         self.assertFalse(isfile(output_path))
         self.plugin._stream_download_file(invalid_path, output_path)
         self.assertFalse(isfile(output_path))
+        self.assertFalse(self.plugin._downloading)
 
-        self.plugin._stream_download_file(valid_os_url, output_path)
+        thread = Thread(target=self.plugin._stream_download_file,
+                        args=(valid_os_url, output_path))
+        thread.start()
+        sleep(0.5)
+        self.assertTrue(self.plugin._downloading)
+        thread.join()
         self.assertTrue(isfile(output_path))
+        self.assertFalse(self.plugin._downloading)
         remove(output_path)
-        self.plugin._stream_download_file(valid_update_file, output_path)
+
+        thread = Thread(target=self.plugin._stream_download_file,
+                        args=(valid_update_file, output_path))
+        thread.start()
+        sleep(0.5)
+        self.assertTrue(self.plugin._downloading)
+        thread.join()
         self.assertTrue(isfile(output_path))
+        self.assertFalse(self.plugin._downloading)
         remove(output_path)
+
+    def test_get_build_info(self):
+        resp = self.plugin.bus.wait_for_response(
+            Message("neon.device_updater.get_build_info"))
+        self.assertEqual(resp.data, self.plugin.build_info)
+
+    def test_get_download_status(self):
+        self.assertFalse(self.plugin._downloading)
+        resp = self.plugin.bus.wait_for_response(Message(
+            "neon.device_updater.get_download_status"))
+        self.assertFalse(resp.data['downloading'])
+
+        self.plugin._downloading = True
+        resp = self.plugin.bus.wait_for_response(Message(
+            "neon.device_updater.get_download_status"))
+        self.assertTrue(resp.data['downloading'])
+
+        self.plugin._downloading = False
 
 
 if __name__ == '__main__':

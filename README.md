@@ -17,7 +17,6 @@ PHAL:
       initramfs_url: "https://github.com/NeonGeckoCom/neon_debos/raw/{}/overlays/02-rpi4/boot/firmware/initramfs"
       initramfs_path: /opt/neon/firmware/initramfs
       initramfs_update_path: /opt/neon/initramfs
-      squashfs_url: "https://2222.us/app/files/neon_images/pi/mycroft_mark_2/updates/{}/"
       squashfs_path: /opt/neon/update.squashfs
       default_track: dev
 ```
@@ -53,4 +52,16 @@ Check for an available InitramFS update and emit a response with data:
 `new_version` or `error`.
 ```python
 Message("neon.update_squashfs", {'track': 'dev'})
+```
+
+### Get Build Info
+Get metadata for currently installed build:
+```python
+Message("neon.device_updater.get_build_info")
+```
+
+### Get Download Status
+Query the plugin if an update is currently downloading:
+```python
+Message("neon.device_updater.get_download_status")
 ```

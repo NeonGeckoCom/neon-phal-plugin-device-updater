@@ -60,6 +60,7 @@ class DeviceUpdater(PHALPlugin):
         self._default_branch = self.config.get("default_track") or "master"
         self._build_info = None
         self._initramfs_hash = None
+        self._downloading = False
 
         # Register messagebus listeners
         self.bus.on("neon.check_update_initramfs", self.check_update_initramfs)
@@ -70,13 +71,15 @@ class DeviceUpdater(PHALPlugin):
                     self.check_update_available)
         self.bus.on("neon.device_updater.get_build_info",
                     self.get_build_info)
+        self.bus.on("neon.device_updater.get_download_status",
+                    self.get_download_status)
 
     @property
     def squashfs_url(self):
         log_deprecation("FTP update references are deprecated.", "1.0.0")
-        return self.config.get("squashfs_url", "https://2222.us/app/files/"
-                                               "neon_images/pi/mycroft_mark_2/"
-                                               "updates/{}/")
+        return self.config.get("squashfs_url",
+                               "https://download.neonaiservices.com/neon_os/"
+                               "core/rpi4/updates/{}/")
 
     @property
     def initramfs_url(self):
@@ -92,13 +95,11 @@ class DeviceUpdater(PHALPlugin):
         if not self._initramfs_hash:
             try:
                 Popen("mount_firmware", shell=True).wait(5)
-                with open(self.initramfs_real_path, "rb") as f:
-                    self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
             except Exception as e:
                 LOG.error(e)
-                if isfile(self.initramfs_real_path):
-                    with open(self.initramfs_real_path, "rb") as f:
-                        self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
+            if isfile(self.initramfs_real_path):
+                with open(self.initramfs_real_path, "rb") as f:
+                    self._initramfs_hash = hashlib.md5(f.read()).hexdigest()
         LOG.debug(f"hash={self._initramfs_hash}")
         return self._initramfs_hash
 
@@ -124,6 +125,7 @@ class DeviceUpdater(PHALPlugin):
         @return: True if a newer initramfs is available to download
         """
         branch = branch or self._default_branch
+        branch = "master" if branch == "stable" else branch
         if not self.initramfs_url:
             raise RuntimeError("No initramfs_url configured")
         initramfs_url = self.initramfs_url.format(branch)
@@ -235,8 +237,7 @@ class DeviceUpdater(PHALPlugin):
 
         return self._stream_download_file(download_url, download_path)
 
-    @staticmethod
-    def _stream_download_file(download_url: str,
+    def _stream_download_file(self, download_url: str,
                               download_path: str) -> Optional[str]:
         """
         Download a remote resource to a local path and return the path to the
@@ -249,6 +250,7 @@ class DeviceUpdater(PHALPlugin):
         # Download the update
         LOG.info(f"Downloading update from {download_url}")
         temp_dl_path = f"{download_path}.download"
+        self._downloading = True
         try:
             with requests.get(download_url, stream=True) as stream:
                 with open(temp_dl_path, 'wb') as f:
@@ -260,14 +262,17 @@ class DeviceUpdater(PHALPlugin):
             if file_mib < 100:
                 LOG.error(f"Downloaded file is too small ({file_mib}MiB)")
                 remove(temp_dl_path)
+                self._downloading = False
                 return
             shutil.move(temp_dl_path, download_path)
             LOG.info(f"Saved download to {download_path}")
+            self._downloading = False
             return download_path
         except Exception as e:
             LOG.exception(e)
             if isfile(temp_dl_path):
                 remove(temp_dl_path)
+        self._downloading = False
 
     def _get_gh_latest_release_tag(self, track: str = None) -> str:
         """
@@ -280,12 +285,16 @@ class DeviceUpdater(PHALPlugin):
             valid release
         """
         include_prerelease = (track or self._default_branch) in ("dev", "beta")
-
         default_time = "2000-01-01T00:00:00Z"
         url = f'https://api.github.com/repos/{self.release_repo}/releases'
-        releases: list = requests.get(url).json()
+        LOG.debug(f"Getting releases from {self.release_repo}. "
+                  f"prerelease={include_prerelease}")
         if not include_prerelease:
-            releases = [r for r in releases if not r.get('prerelease', True)]
+            url = f"{url}/latest"
+            release = requests.get(url).json()
+            return release.get("tag_name")
+
+        releases: list = requests.get(url).json()
         installed_os = self.build_info.get("base_os", {}).get("name")
         if not installed_os:
             raise RuntimeError(f"Unable to determine installed OS from: "
@@ -309,6 +318,7 @@ class DeviceUpdater(PHALPlugin):
                                f"{self.build_info}")
         meta_url = (f"https://raw.githubusercontent.com/{self.release_repo}/"
                     f"{tag}/{installed_os}.yaml")
+        LOG.debug(f"Getting metadata from {meta_url}")
         resp = requests.get(meta_url)
         if not resp.ok:
             raise ValueError(f"Unable to get metadata for tag={tag}")
@@ -355,16 +365,20 @@ class DeviceUpdater(PHALPlugin):
         Handle a request to check for initramfs updates
         @param message: `neon.check_update_initramfs` Message
         """
-        branch = message.data.get("track") or self._default_branch
+        track = message.data.get("track") or self._default_branch
+        track = "beta" if track in ("dev", "beta") else "stable"
         try:
             meta = self._get_gh_release_meta_from_tag(
-                self._get_gh_latest_release_tag(self._default_branch))
+                self._get_gh_latest_release_tag(track))
             update_available = meta['initramfs']['md5'] != self.initramfs_hash
         except Exception as e:
             LOG.exception(e)
-            update_available = self._legacy_check_initramfs_update_available(branch)
+            meta = dict()
+            update_available = self._legacy_check_initramfs_update_available(track)
         self.bus.emit(message.response({"update_available": update_available,
-                                        "track": branch}))
+                                        "new_meta": meta.get('initramfs'),
+                                        "current_hash": self.initramfs_hash,
+                                        "track": track}))
 
     def check_update_squashfs(self, message: Message):
         """
@@ -428,13 +442,14 @@ class DeviceUpdater(PHALPlugin):
             download_url = update_metadata['download_url'].replace(
                 f"/{platform}/", f"/{platform}/updates/").replace(".img.xz",
                                                                   ".squashfs")
-            download_path = join(dirname(self.initramfs_update_path),
-                                 update_metadata['build_version'])
+            download_path = str(join(dirname(self.initramfs_update_path),
+                                     update_metadata['build_version']))
             if isfile(download_path):
                 LOG.info("Update already downloaded")
-                return download_path
-            update_file = self._stream_download_file(download_url,
-                                                     download_path)
+                update_file = download_path
+            else:
+                update_file = self._stream_download_file(download_url,
+                                                         download_path)
         except Exception as e:
             LOG.exception(f"Failed to get download_url: {e}")
             update_file = self._legacy_get_squashfs_latest(track)
@@ -511,3 +526,10 @@ class DeviceUpdater(PHALPlugin):
         @param message: `neon.device_updater.get_build_info` Message
         """
         self.bus.emit(message.response(self.build_info))
+
+    def get_download_status(self, message: Message):
+        """
+        Handle a request to check if a download is in-progress
+        @param message: `neon.device_updater.get_download_status` Message
+        """
+        self.bus.emit(message.response(data={"downloading": self._downloading}))
