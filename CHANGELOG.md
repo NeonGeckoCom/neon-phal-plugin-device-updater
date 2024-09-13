@@ -1,32 +1,12 @@
 # Changelog
 
-## [0.2.1a4](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.2.1a4) (2024-07-15)
+## [0.3.1a1](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.3.1a1) (2024-09-13)
 
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.2.1a3...0.2.1a4)
-
-**Merged pull requests:**
-
-- Fix backwards-compat branch ref in legacy update method [\#21](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/21) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.2.1a3](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.2.1a3) (2024-07-15)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.2.1a2...0.2.1a3)
-
-## [0.2.1a2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.2.1a2) (2024-06-10)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.2.1a1...0.2.1a2)
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.3.0...0.3.1a1)
 
 **Merged pull requests:**
 
-- Add endpoint to check download status [\#19](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/19) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.2.1a1](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.2.1a1) (2024-05-17)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.2.0...0.2.1a1)
-
-**Merged pull requests:**
-
-- Add data to update responses and fix branch bug [\#18](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/18) ([NeonDaniel](https://github.com/NeonDaniel))
+- Update dependencies to allow latest OVOS packages [\#23](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/23) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
