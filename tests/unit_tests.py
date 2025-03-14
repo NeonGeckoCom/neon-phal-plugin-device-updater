@@ -299,7 +299,7 @@ class PluginTests(unittest.TestCase):
         thread = Thread(target=self.plugin._stream_download_file,
                         args=(valid_os_url, output_path))
         thread.start()
-        sleep(0.2)
+        sleep(0.5)
         self.assertTrue(self.plugin._downloading)
         thread.join()
         self.assertTrue(isfile(output_path))
