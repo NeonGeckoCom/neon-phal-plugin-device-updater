@@ -16,12 +16,12 @@ jobs:
     timeout-minutes: 25
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9, '3.10' ]
+        python-version: [ 3.9, '3.10', '3.11' ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -34,7 +34,7 @@ jobs:
         run: |
           pytest tests/unit_tests.py --doctest-modules --junitxml=tests/unit-test-results.xml
       - name: Upload Unit test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: unit-test-results
+          name: unit-test-results-${{ matrix.python-version }}
           path: tests/unit-test-results.xml
