@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -299,7 +299,7 @@ class PluginTests(unittest.TestCase):
         thread = Thread(target=self.plugin._stream_download_file,
                         args=(valid_os_url, output_path))
         thread.start()
-        sleep(0.2)
+        sleep(0.5)
         self.assertTrue(self.plugin._downloading)
         thread.join()
         self.assertTrue(isfile(output_path))
