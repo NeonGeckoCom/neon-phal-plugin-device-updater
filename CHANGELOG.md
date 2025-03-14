@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1a2](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.3.1a2) (2025-03-14)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.3.1a1...0.3.1a2)
+
+**Merged pull requests:**
+
+- Update GitHub actions and license notices [\#24](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/pull/24) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.3.1a1](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/tree/0.3.1a1) (2024-09-13)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-phal-plugin-device-updater/compare/0.3.0...0.3.1a1)
